@@ -28,7 +28,7 @@ export async function getGuestBookings() {
   if (!supabase) return { data: [], error: new Error('Connect Supabase to view bookings.') }
   const { data, error } = await supabase
     .from('bookings')
-    .select('id,reference,guest_name,guest_email,check_in,checkout,status,payment_status,agreed_total,currency,hold_expires_at,created_at,unit:units(name,unit_type,property:properties(name,city))')
+    .select('id,reference,guest_name,guest_email,guest_count,check_in,checkout,status,payment_status,agreed_total,currency,hold_expires_at,created_at,booking_extensions(id,requested_checkout,status,reason,created_at),unit:units(name,unit_type,property:properties(name,city,timezone))')
     .order('created_at', { ascending: false })
   return { data: data ?? [], error }
 }
@@ -74,6 +74,38 @@ export async function recordCheckin(bookingId, notes = '') {
   const { data, error } = await supabase.rpc('record_checkin', {
     p_booking_id: bookingId,
     p_notes: notes,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function requestExtension(bookingId, checkoutDate, reason = '') {
+  if (!supabase) throw new Error('Connect Supabase to request an extension.')
+  const { data, error } = await supabase.rpc('request_extension', {
+    p_booking_id: bookingId,
+    p_requested_checkout: checkoutDate,
+    p_reason: reason,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function getPendingExtensions() {
+  if (!supabase) return { data: [], error: new Error('Connect Supabase to manage extensions.') }
+  const { data, error } = await supabase
+    .from('booking_extensions')
+    .select('id,booking_id,requested_by,original_checkout,requested_checkout,status,reason,created_at,booking:bookings!inner(reference,guest_name,guest_email,checkout,unit:units(id,name,property:properties(id,name,timezone)))')
+    .eq('status', 'pending')
+    .order('created_at')
+  return { data: data ?? [], error }
+}
+
+export async function decideExtension(extensionId, approve, reason = '') {
+  if (!supabase) throw new Error('Connect Supabase to manage extensions.')
+  const { data, error } = await supabase.rpc('decide_extension', {
+    p_extension_id: extensionId,
+    p_approve: approve,
+    p_reason: reason,
   })
   if (error) throw error
   return data
