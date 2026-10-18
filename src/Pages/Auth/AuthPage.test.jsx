@@ -57,6 +57,18 @@ describe('role-aware sign-in routing', () => {
     }))
   })
 
+  it('shows and hides the password when requested', async () => {
+    renderAuth()
+    const user = userEvent.setup()
+    const password = screen.getByLabelText('Password')
+
+    expect(password).toHaveAttribute('type', 'password')
+    await user.click(screen.getByRole('button', { name: 'Show password' }))
+    expect(password).toHaveAttribute('type', 'text')
+    await user.click(screen.getByRole('button', { name: 'Hide password' }))
+    expect(password).toHaveAttribute('type', 'password')
+  })
+
   it.each(['super_admin', 'property_manager'])('routes %s accounts to the admin desk', async (role) => {
     mocks.from.mockImplementation((table) => ({
       select: vi.fn().mockReturnThis(),

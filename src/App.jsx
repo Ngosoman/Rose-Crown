@@ -9,6 +9,7 @@ import AuthPage from './Pages/Auth/AuthPage'
 import GuestDashboard from './Pages/Guest/GuestDashboard'
 import StaffDashboard from './Pages/Admin/StaffDashboard'
 import PolicyPage from './Pages/Public/PolicyPage'
+import ProfilePage from './Pages/Account/ProfilePage'
 
 export default function App() {
   return <BrowserRouter>
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="stays/:slug" element={<PropertyPage />} />
         <Route path="book/:unitId" element={<BookingPage />} />
         <Route path="auth" element={<AuthPage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="my-stays" element={<GuestDashboard />} />
         <Route path="manage" element={<StaffDashboard />} />
         <Route path="privacy" element={<PolicyPage />} />
