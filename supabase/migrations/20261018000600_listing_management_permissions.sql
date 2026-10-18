@@ -11,7 +11,7 @@ $$;
 revoke all on function public.can_manage_listings(uuid) from public;
 grant execute on function public.can_manage_listings(uuid) to authenticated;
 
- drop policy units_assigned_write on public.units;
+drop policy units_assigned_write on public.units;
 create policy units_assigned_write on public.units for all to authenticated
 using (public.can_manage_listings(property_id))
 with check (public.can_manage_listings(property_id));
@@ -27,8 +27,12 @@ using (exists (select 1 from public.units u where u.id = unit_id and public.can_
 with check (exists (select 1 from public.units u where u.id = unit_id and public.can_manage_listings(u.property_id)));
 
 revoke insert, update, delete on public.unit_amenities from authenticated;
+drop policy if exists unit_amenities_assigned_write on public.unit_amenities;
+create policy unit_amenities_assigned_write on public.unit_amenities for all to authenticated
+using (exists (select 1 from public.units u where u.id = unit_id and public.can_manage_listings(u.property_id)))
+with check (exists (select 1 from public.units u where u.id = unit_id and public.can_manage_listings(u.property_id)));
 
- drop policy listing_photos_staff_insert on storage.objects;
+drop policy listing_photos_staff_insert on storage.objects;
 create policy listing_photos_staff_insert on storage.objects for insert to authenticated
 with check (bucket_id = 'rose-crown-listings' and public.can_manage_listings(((storage.foldername(name))[1])::uuid));
 
