@@ -19,9 +19,10 @@ export default function BookingPage() {
   const [configured, setConfigured] = useState(true)
   const [error, setError] = useState('')
   const [booking, setBooking] = useState(null)
-  const { register, handleSubmit, setValue, getValues, watch, formState: { errors, isSubmitting } } = useForm({
+  const requestedGuests = Number(searchParams.get('guests') || 1)
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(bookingSchema),
-    defaultValues: { guestName: '', guestEmail: '', guestPhone: '', guestCount: Number(searchParams.get('guests') || 1), checkIn: searchParams.get('checkIn') || '', checkout: searchParams.get('checkout') || '', specialRequests: '' },
+    defaultValues: { guestName: '', guestEmail: '', guestPhone: '', guestCount: requestedGuests, checkIn: searchParams.get('checkIn') || '', checkout: searchParams.get('checkout') || '', specialRequests: '' },
   })
 
   useEffect(() => {
@@ -37,11 +38,10 @@ export default function BookingPage() {
   }, [unitId])
 
   useEffect(() => {
-    if (unit) setValue('guestCount', Math.min(Number(getValues('guestCount')) || 1, unit.capacity))
-  }, [unit, getValues, setValue])
+    if (unit) setValue('guestCount', Math.min(requestedGuests, unit.capacity))
+  }, [unit, requestedGuests, setValue])
 
   const photo = useMemo(() => getUnitImage(unit), [unit])
-  const selectedCheckIn = watch('checkIn')
   async function submit(values) {
     try {
       const result = await createBookingRequest({ ...values, unitId })
@@ -67,7 +67,7 @@ export default function BookingPage() {
           <div className="form-section-title"><span>01</span><h2>Your details</h2></div>
           <div className="form-grid"><label className="form-field"><span>Full name</span><input autoComplete="name" {...register('guestName')} aria-invalid={Boolean(errors.guestName)} />{errors.guestName && <small>{errors.guestName.message}</small>}</label><label className="form-field"><span>Email address</span><input type="email" autoComplete="email" {...register('guestEmail')} aria-invalid={Boolean(errors.guestEmail)} />{errors.guestEmail && <small>{errors.guestEmail.message}</small>}</label><label className="form-field"><span>Phone number</span><input type="tel" autoComplete="tel" {...register('guestPhone')} aria-invalid={Boolean(errors.guestPhone)} />{errors.guestPhone && <small>{errors.guestPhone.message}</small>}</label></div>
           <div className="form-section-title"><span>02</span><h2>Dates and details</h2></div>
-          <div className="form-grid"><label className="form-field"><span>Check in</span><input type="date" min={today} {...register('checkIn')} aria-invalid={Boolean(errors.checkIn)} />{errors.checkIn && <small>{errors.checkIn.message}</small>}</label><label className="form-field"><span>Check out</span><input type="date" min={selectedCheckIn || today} {...register('checkout')} aria-invalid={Boolean(errors.checkout)} />{errors.checkout && <small>{errors.checkout.message}</small>}</label><label className="form-field"><span>Guests</span><select {...register('guestCount', { valueAsNumber: true })} aria-invalid={Boolean(errors.guestCount)}>{Array.from({ length: unit.capacity }, (_, index) => index + 1).map((count) => <option value={count} key={count}>{count} {count === 1 ? 'guest' : 'guests'}</option>)}</select>{errors.guestCount && <small>{errors.guestCount.message}</small>}</label><label className="form-field form-field-wide"><span>Anything the host should know? <em>Optional</em></span><textarea rows="3" {...register('specialRequests')} />{errors.specialRequests && <small>{errors.specialRequests.message}</small>}</label></div>
+          <div className="form-grid"><label className="form-field"><span>Check in</span><input type="date" min={today} {...register('checkIn')} aria-invalid={Boolean(errors.checkIn)} />{errors.checkIn && <small>{errors.checkIn.message}</small>}</label><label className="form-field"><span>Check out</span><input type="date" min={today} {...register('checkout')} aria-invalid={Boolean(errors.checkout)} />{errors.checkout && <small>{errors.checkout.message}</small>}</label><label className="form-field"><span>Guests</span><select {...register('guestCount', { valueAsNumber: true })} aria-invalid={Boolean(errors.guestCount)}>{Array.from({ length: unit.capacity }, (_, index) => index + 1).map((count) => <option value={count} key={count}>{count} {count === 1 ? 'guest' : 'guests'}</option>)}</select>{errors.guestCount && <small>{errors.guestCount.message}</small>}</label><label className="form-field form-field-wide"><span>Anything the host should know? <em>Optional</em></span><textarea rows="3" {...register('specialRequests')} />{errors.specialRequests && <small>{errors.specialRequests.message}</small>}</label></div>
           <button className="button button-dark booking-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Sending request…' : 'Request this stay'} <ArrowRight size={17} /></button>
           <p className="form-privacy"><LockKeyhole size={14} /> Your details are only shared with this property.</p>
         </form>

@@ -12,12 +12,14 @@ export default function StaySearchPage() {
   const [configured, setConfigured] = useState(true)
   const [error, setError] = useState('')
   const [availability, setAvailability] = useState(null)
-  const [checkingDates, setCheckingDates] = useState(false)
   const [unitType, setUnitType] = useState('all')
   const city = params.get('city') ?? ''
   const checkIn = params.get('checkIn') ?? ''
   const checkout = params.get('checkout') ?? ''
   const guests = Number(params.get('guests') || 1)
+  const dateKey = checkIn && checkout > checkIn ? `${checkIn}:${checkout}` : ''
+  const availabilityData = availability?.dateKey === dateKey ? availability.units : null
+  const checkingDates = Boolean(dateKey && properties.length > 0 && !availabilityData)
 
   useEffect(() => {
     let current = true
@@ -31,34 +33,30 @@ export default function StaySearchPage() {
   }, [])
 
   useEffect(() => {
-    if (!checkIn || !checkout || checkout <= checkIn || properties.length === 0) {
-      setAvailability(null)
-      return undefined
-    }
+    if (!dateKey || properties.length === 0) return undefined
     let current = true
-    setCheckingDates(true)
     const units = properties.flatMap((property) => property.units)
     Promise.all(units.map(async (unit) => {
       const result = await getUnitAvailability(unit.id, checkIn, checkout)
       if (result.error) throw result.error
       return [unit.id, result.available]
-    })).then((entries) => current && setAvailability(Object.fromEntries(entries)))
+    })).then((entries) => current && setAvailability({ dateKey, units: Object.fromEntries(entries) }))
       .catch((reason) => current && setError(reason.message))
-      .finally(() => current && setCheckingDates(false))
     return () => { current = false }
-  }, [properties, checkIn, checkout])
+  }, [properties, checkIn, checkout, dateKey])
 
   const results = useMemo(() => properties.flatMap((property) => property.units
     .filter((unit) => unit.capacity >= guests && (unitType === 'all' || unit.unit_type === unitType))
-    .filter((unit) => !checkIn || !checkout || availability?.[unit.id] === true)
+    .filter((unit) => !dateKey || availabilityData?.[unit.id] === true)
     .map((unit) => ({ ...unit, property })))
-    .filter(({ property }) => !city || `${property.city} ${property.name} ${property.address}`.toLowerCase().includes(city.toLowerCase())), [properties, guests, unitType, city, checkIn, checkout, availability])
+    .filter(({ property }) => !city || `${property.city} ${property.name} ${property.address}`.toLowerCase().includes(city.toLowerCase())), [properties, guests, unitType, city, dateKey, availabilityData])
 
-  function propertyHref(slug) {
+  function propertyHref(slug, unitId = '') {
     const query = new URLSearchParams()
     if (checkIn) query.set('checkIn', checkIn)
     if (checkout) query.set('checkout', checkout)
     if (guests) query.set('guests', String(guests))
+    if (unitId) query.set('unit', unitId)
     const suffix = query.toString()
     return `/stays/${slug}${suffix ? `?${suffix}` : ''}`
   }
@@ -73,7 +71,7 @@ export default function StaySearchPage() {
     {!loading && configured && !error && !checkingDates && results.length === 0 && <EmptyState title="No stays found just yet" body="Try different dates, a nearby city, fewer guests, or another stay type." />}
     <div className="search-results">{results.map((unit) => {
       const photo = getUnitImage(unit)
-      return <article className="result-row" key={unit.id}><Link to={propertyHref(unit.property.slug)} className="result-photo">{photo ? <img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || unit.name} /> : <div className="image-empty"><span>{unit.property.city || 'StayEase'}</span></div>}</Link><div className="result-info"><span className="eyebrow"><MapPin size={12} /> {unit.property.city || unit.property.name}</span><Link to={propertyHref(unit.property.slug)}><h2>{unit.name} <span>at {unit.property.name}</span></h2></Link><p>{unit.description || `${unit.unit_type} · ${unit.bedrooms} bedrooms · Up to ${unit.capacity} guests`}</p><div className="amenity-list">{(unit.unit_amenities ?? []).slice(0, 3).map(({ amenities }) => amenities?.name).filter(Boolean).map((name) => <span key={name}>{name}</span>)}</div></div><div className="result-action"><strong>{formatMoney(unit.base_nightly_price, unit.currency)}</strong><span>starting / night</span><Link className="button button-outline" to={`${propertyHref(unit.property.slug)}&unit=${unit.id}`}>View stay <ArrowRight size={15} /></Link></div></article>
+      return <article className="result-row" key={unit.id}><Link to={propertyHref(unit.property.slug, unit.id)} className="result-photo">{photo ? <img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || unit.name} /> : <div className="image-empty"><span>{unit.property.city || 'StayEase'}</span></div>}</Link><div className="result-info"><span className="eyebrow"><MapPin size={12} /> {unit.property.city || unit.property.name}</span><Link to={propertyHref(unit.property.slug, unit.id)}><h2>{unit.name} <span>at {unit.property.name}</span></h2></Link><p>{unit.description || `${unit.unit_type} · ${unit.bedrooms} bedrooms · Up to ${unit.capacity} guests`}</p><div className="amenity-list">{(unit.unit_amenities ?? []).slice(0, 3).map(({ amenities }) => amenities?.name).filter(Boolean).map((name) => <span key={name}>{name}</span>)}</div></div><div className="result-action"><strong>{formatMoney(unit.base_nightly_price, unit.currency)}</strong><span>starting / night</span><Link className="button button-outline" to={propertyHref(unit.property.slug, unit.id)}>View stay <ArrowRight size={15} /></Link></div></article>
     })}</div>
     {(checkIn || checkout) && <div className="inline-note">Your selected dates are checked securely when you request a booking. A request is not confirmed until the host approves it.</div>}
   </section>
