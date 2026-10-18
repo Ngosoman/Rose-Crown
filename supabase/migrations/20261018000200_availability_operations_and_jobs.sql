@@ -104,7 +104,7 @@ end $$;
 create or replace function public.run_scheduled_jobs(p_now timestamptz default now())
 returns jsonb language plpgsql security definer set search_path = ''
 as $$
-declare v_expired integer := 0; v_due integer := 0; v_reminders integer := 0; v_booking record; v_property record; v_staff record; v_local_now timestamp; v_day date; v_slot text; v_due_at timestamptz; v_interval integer; v_overdue_slot bigint;
+declare v_expired integer := 0; v_due integer := 0; v_reminders integer := 0; v_booking record; v_staff record; v_slot text; v_due_at timestamptz; v_interval integer; v_overdue_slot bigint;
 begin
   if coalesce((auth.jwt() ->> 'role'), '') <> 'service_role' then raise exception 'Scheduler authorization required' using errcode = '42501'; end if;
   perform u.id
@@ -126,14 +126,12 @@ begin
 
   for v_booking in
     select b.*, u.name as unit_name, u.property_id, p.name as property_name, p.timezone,
-      p.checkout_reminder_minutes, p.checkout_final_reminder_minutes, p.overdue_alert_interval_minutes, p.checkout_briefing_time
+      p.checkout_reminder_minutes, p.checkout_final_reminder_minutes, p.overdue_alert_interval_minutes
     from public.bookings b join public.units u on u.id = b.unit_id join public.properties p on p.id = u.property_id
     where b.status in ('approved', 'checked_in', 'checkout_due') and b.checkout > p_now - interval '1 day'
     order by u.id, b.id
     for update of u, b
   loop
-    v_local_now := p_now at time zone v_booking.timezone;
-    v_day := v_local_now::date;
     v_due_at := v_booking.checkout;
     v_interval := greatest(5, v_booking.overdue_alert_interval_minutes);
     if v_booking.status = 'checked_in' and v_due_at <= p_now then
@@ -168,13 +166,6 @@ begin
         values (v_booking.guest_id, v_booking.id, v_booking.property_id, 'checkout_reminder', 'Checkout reminder', 'Your checkout time is ' || to_char(v_due_at at time zone v_booking.timezone, 'HH12:MI AM') || ' local time.', p_now, 'in_app', v_booking.id::text || ':' || v_due_at::text || ':' || v_slot || ':' || v_booking.guest_id::text)
         on conflict (deduplication_key) do nothing;
       end if;
-    end if;
-    if v_local_now::time >= v_booking.checkout_briefing_time and v_local_now::time < v_booking.checkout_briefing_time + interval '5 minutes' and (v_due_at at time zone v_booking.timezone)::date = v_day then
-      for v_staff in select pm.user_id from public.property_members pm where pm.property_id = v_booking.property_id loop
-        insert into public.notifications(recipient_id, booking_id, property_id, notification_type, title, body, scheduled_at, channel, deduplication_key)
-        values (v_staff.user_id, v_booking.id, v_booking.property_id, 'daily_checkout_briefing', 'Today’s checkout briefing', v_booking.guest_name || ' · ' || v_booking.reference || ' · ' || v_booking.unit_name || ' · ' || to_char(v_due_at at time zone v_booking.timezone, 'HH12:MI AM'), p_now, 'in_app', v_booking.property_id::text || ':' || v_day::text || ':' || v_staff.user_id::text || ':' || v_booking.id::text)
-        on conflict (deduplication_key) do nothing;
-      end loop;
     end if;
   end loop;
   return jsonb_build_object('expired_holds', v_expired, 'checkouts_due', v_due, 'notifications_considered', v_reminders);

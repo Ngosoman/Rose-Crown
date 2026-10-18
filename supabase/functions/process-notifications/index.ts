@@ -37,8 +37,11 @@ Deno.serve(async (request) => {
   const admin = createClient(projectUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-  const { data: jobs, error: jobError } = await admin.rpc('run_scheduled_jobs', { p_now: new Date().toISOString() })
+  const runAt = new Date().toISOString()
+  const { data: jobs, error: jobError } = await admin.rpc('run_scheduled_jobs', { p_now: runAt })
   if (jobError) return json({ error: 'Scheduled job execution failed.' }, 500)
+  const { data: briefings, error: briefingError } = await admin.rpc('enqueue_daily_checkout_briefings', { p_now: runAt })
+  if (briefingError) return json({ error: 'Daily checkout briefing failed.' }, 500)
 
   const { data: notifications, error: claimError } = await admin.rpc('claim_notifications', { p_limit: 50 })
   if (claimError) return json({ error: 'Notification claim failed.' }, 500)
@@ -58,7 +61,7 @@ Deno.serve(async (request) => {
     results.push({ id: notification.id, status: updateError ? 'update_failed' : patch.delivery_status })
   }
 
-  return json({ jobs, processed: results.length, results })
+  return json({ jobs, briefings, processed: results.length, results })
 })
 
 async function deliver(admin: SupabaseClient, notification: Notification) {
