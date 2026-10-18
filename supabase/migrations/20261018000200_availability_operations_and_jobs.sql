@@ -107,6 +107,11 @@ as $$
 declare v_expired integer := 0; v_due integer := 0; v_reminders integer := 0; v_booking record; v_property record; v_staff record; v_local_now timestamp; v_day date; v_slot text; v_due_at timestamptz; v_interval integer; v_overdue_slot bigint;
 begin
   if coalesce((auth.jwt() ->> 'role'), '') <> 'service_role' then raise exception 'Scheduler authorization required' using errcode = '42501'; end if;
+  perform u.id
+    from public.units u
+    where exists (select 1 from public.bookings b where b.unit_id = u.id and b.status = 'pending' and b.hold_expires_at <= p_now)
+    order by u.id
+    for update;
   with expired as (
     update public.bookings b set status = 'expired', updated_at = p_now
     where b.status = 'pending' and b.hold_expires_at <= p_now returning b.id, b.unit_id
@@ -124,6 +129,8 @@ begin
       p.checkout_reminder_minutes, p.checkout_final_reminder_minutes, p.overdue_alert_interval_minutes, p.checkout_briefing_time
     from public.bookings b join public.units u on u.id = b.unit_id join public.properties p on p.id = u.property_id
     where b.status in ('approved', 'checked_in', 'checkout_due') and b.checkout > p_now - interval '1 day'
+    order by u.id, b.id
+    for update of u, b
   loop
     v_local_now := p_now at time zone v_booking.timezone;
     v_day := v_local_now::date;
