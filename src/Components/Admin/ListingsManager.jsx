@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ImagePlus, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { supabase } from '../../Lib/supabase'
 import {
   addUnitRateRule,
   deleteUnitPhoto,
@@ -54,7 +55,14 @@ export default function ListingsManager({ isSuperAdmin, canManageListings }) {
       setAmenities(result.amenities)
     }).catch((reason) => current && setError(reason.message || 'Listings could not be loaded.'))
       .finally(() => current && setLoading(false))
-    return () => { current = false }
+    const channel = supabase?.channel('staff-listings')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, () => loadListings().then((result) => { setProperties(result.properties); setAmenities(result.amenities) }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'units' }, () => loadListings().then((result) => { setProperties(result.properties); setAmenities(result.amenities) }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unit_photos' }, () => loadListings().then((result) => { setProperties(result.properties); setAmenities(result.amenities) }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unit_rate_rules' }, () => loadListings().then((result) => { setProperties(result.properties); setAmenities(result.amenities) }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unit_amenities' }, () => loadListings().then((result) => { setProperties(result.properties); setAmenities(result.amenities) }))
+      .subscribe()
+    return () => { current = false; if (channel && supabase) supabase.removeChannel(channel) }
   }, [])
 
   async function savePropertyDetails(values) {
