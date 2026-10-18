@@ -61,6 +61,7 @@ create table public.units (
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique (id, currency),
   unique (property_id, name)
 );
 create index units_property_active_idx on public.units(property_id, active);
@@ -97,6 +98,7 @@ create table public.bookings (
   guest_name text not null,
   guest_email text not null,
   guest_phone text not null default '',
+  guest_count integer not null default 1 check (guest_count > 0),
   check_in timestamptz not null,
   checkout timestamptz not null,
   stay daterange not null,
@@ -119,6 +121,8 @@ create table public.bookings (
 );
 create index bookings_guest_created_idx on public.bookings(guest_id, created_at desc);
 create index bookings_unit_dates_idx on public.bookings(unit_id, check_in, checkout);
+alter table public.bookings add constraint bookings_unit_currency_match foreign key (unit_id, currency) references public.units(id, currency);
+alter table public.unit_rate_rules add constraint rate_rules_unit_currency_match foreign key (unit_id, currency) references public.units(id, currency);
 create table public.unit_reservations (
   id uuid primary key default gen_random_uuid(),
   unit_id uuid not null references public.units(id) on delete cascade,
@@ -241,7 +245,8 @@ grant execute on function public.can_manage_property(uuid) to anon;
 
 create or replace function public.create_booking_request(
   p_unit_id uuid, p_check_in date, p_checkout date,
-  p_guest_name text, p_guest_email text, p_guest_phone text default '', p_special_requests text default ''
+  p_guest_name text, p_guest_email text, p_guest_count integer,
+  p_guest_phone text default '', p_special_requests text default ''
 )
 returns public.bookings language plpgsql security definer set search_path = ''
 as $$
@@ -260,8 +265,10 @@ begin
   if length(trim(coalesce(p_guest_name, ''))) < 2 or position('@' in coalesce(p_guest_email, '')) < 2 then
     raise exception 'Guest name and valid email are required' using errcode = '22023';
   end if;
+  if p_guest_count is null or p_guest_count < 1 then raise exception 'Guest count must be positive' using errcode = '22023'; end if;
   select * into v_unit from public.units where id = p_unit_id for update;
   if not found or not v_unit.active then raise exception 'Unit is unavailable' using errcode = 'P0001'; end if;
+  if p_guest_count > v_unit.capacity then raise exception 'Guest count exceeds unit capacity' using errcode = '22023'; end if;
   select * into v_property from public.properties where id = v_unit.property_id and published;
   if not found then raise exception 'Property is unavailable' using errcode = 'P0001'; end if;
   update public.unit_reservations r set released_at = now()
@@ -280,8 +287,8 @@ begin
     v_total := v_total + v_rate;
     v_lines := v_lines || jsonb_build_array(jsonb_build_object('date', v_night, 'nightly_rate', v_rate));
   end loop;
-  insert into public.bookings(unit_id, guest_id, guest_name, guest_email, guest_phone, check_in, checkout, stay, source, status, agreed_total, currency, price_breakdown, hold_expires_at, special_requests)
-  values (v_unit.id, (select auth.uid()), trim(p_guest_name), lower(trim(p_guest_email)), coalesce(p_guest_phone, ''),
+  insert into public.bookings(unit_id, guest_id, guest_name, guest_email, guest_phone, guest_count, check_in, checkout, stay, source, status, agreed_total, currency, price_breakdown, hold_expires_at, special_requests)
+  values (v_unit.id, (select auth.uid()), trim(p_guest_name), lower(trim(p_guest_email)), coalesce(p_guest_phone, ''), p_guest_count,
     (p_check_in + v_property.check_in_time) at time zone v_property.timezone,
     (p_checkout + v_property.checkout_time) at time zone v_property.timezone,
     daterange(p_check_in, p_checkout, '[)'), 'website', 'pending', round(v_total, 2), v_unit.currency,
@@ -295,7 +302,7 @@ end $$;
 
 create or replace function public.create_manual_booking(
   p_unit_id uuid, p_check_in date, p_checkout date, p_guest_name text, p_guest_email text,
-  p_guest_phone text, p_source public.booking_source, p_special_requests text default ''
+  p_guest_phone text, p_source public.booking_source, p_guest_count integer default 1, p_special_requests text default ''
 )
 returns public.bookings language plpgsql security definer set search_path = ''
 as $$
@@ -305,6 +312,7 @@ begin
   if p_checkout <= p_check_in or length(trim(coalesce(p_guest_name, ''))) < 2 or position('@' in coalesce(p_guest_email, '')) < 2 then raise exception 'Valid guest details and dates are required' using errcode = '22023'; end if;
   select * into v_unit from public.units where id = p_unit_id for update;
   if not found or not v_unit.active or not public.can_manage_property(v_unit.property_id) then raise exception 'Unit unavailable or unauthorized' using errcode = '42501'; end if;
+  if p_guest_count is null or p_guest_count < 1 or p_guest_count > v_unit.capacity then raise exception 'Guest count exceeds unit capacity' using errcode = '22023'; end if;
   select * into v_property from public.properties where id = v_unit.property_id;
   update public.unit_reservations r set released_at = now() where r.unit_id = v_unit.id and r.status = 'held' and r.released_at is null and exists (select 1 from public.bookings b where b.id = r.booking_id and b.hold_expires_at <= now() and b.status = 'pending');
   update public.bookings set status = 'expired', updated_at = now() where unit_id = v_unit.id and status = 'pending' and hold_expires_at <= now();
@@ -313,8 +321,8 @@ begin
     select coalesce((select rr.nightly_price from public.unit_rate_rules rr where rr.unit_id = v_unit.id and rr.date_from <= v_night and rr.date_to > v_night order by rr.priority desc, rr.date_from desc, rr.id limit 1), v_unit.base_nightly_price) into v_rate;
     v_total := v_total + v_rate; v_lines := v_lines || jsonb_build_array(jsonb_build_object('date', v_night, 'nightly_rate', v_rate));
   end loop;
-  insert into public.bookings(unit_id, guest_name, guest_email, guest_phone, check_in, checkout, stay, source, status, agreed_total, currency, price_breakdown, created_by, approved_by, approved_at, special_requests)
-  values (v_unit.id, trim(p_guest_name), lower(trim(p_guest_email)), coalesce(p_guest_phone, ''), (p_check_in + v_property.check_in_time) at time zone v_property.timezone, (p_checkout + v_property.checkout_time) at time zone v_property.timezone, daterange(p_check_in, p_checkout, '[)'), p_source, 'approved', round(v_total, 2), v_unit.currency, jsonb_build_object('nights', v_lines, 'subtotal', round(v_total, 2)), (select auth.uid()), (select auth.uid()), now(), coalesce(p_special_requests, '')) returning * into v_booking;
+  insert into public.bookings(unit_id, guest_name, guest_email, guest_phone, guest_count, check_in, checkout, stay, source, status, agreed_total, currency, price_breakdown, created_by, approved_by, approved_at, special_requests)
+  values (v_unit.id, trim(p_guest_name), lower(trim(p_guest_email)), coalesce(p_guest_phone, ''), p_guest_count, (p_check_in + v_property.check_in_time) at time zone v_property.timezone, (p_checkout + v_property.checkout_time) at time zone v_property.timezone, daterange(p_check_in, p_checkout, '[)'), p_source, 'approved', round(v_total, 2), v_unit.currency, jsonb_build_object('nights', v_lines, 'subtotal', round(v_total, 2)), (select auth.uid()), (select auth.uid()), now(), coalesce(p_special_requests, '')) returning * into v_booking;
   insert into public.unit_reservations(unit_id, booking_id, stay, status) values (v_unit.id, v_booking.id, v_booking.stay, 'confirmed');
   insert into public.booking_status_history(booking_id, new_status, actor_id, reason) values (v_booking.id, 'approved', (select auth.uid()), 'Staff-created booking');
   insert into public.audit_logs(actor_id, property_id, action, entity_type, entity_id) values ((select auth.uid()), v_unit.property_id, 'manual_booking_created', 'booking', v_booking.id);
@@ -403,14 +411,14 @@ begin
   return v_extension;
 end $$;
 
-revoke all on function public.create_booking_request(uuid, date, date, text, text, text, text) from public;
-revoke all on function public.create_manual_booking(uuid, date, date, text, text, text, public.booking_source, text) from public;
+revoke all on function public.create_booking_request(uuid, date, date, text, text, integer, text, text) from public;
+revoke all on function public.create_manual_booking(uuid, date, date, text, text, text, public.booking_source, integer, text) from public;
 revoke all on function public.decide_booking(uuid, boolean, text) from public;
 revoke all on function public.record_checkout(uuid, text) from public;
 revoke all on function public.request_extension(uuid, date, text) from public;
 revoke all on function public.decide_extension(uuid, boolean, text) from public;
-grant execute on function public.create_booking_request(uuid, date, date, text, text, text, text) to anon, authenticated;
-grant execute on function public.create_manual_booking(uuid, date, date, text, text, text, public.booking_source, text) to authenticated;
+grant execute on function public.create_booking_request(uuid, date, date, text, text, integer, text, text) to anon, authenticated;
+grant execute on function public.create_manual_booking(uuid, date, date, text, text, text, public.booking_source, integer, text) to authenticated;
 grant execute on function public.decide_booking(uuid, boolean, text) to authenticated;
 grant execute on function public.record_checkout(uuid, text) to authenticated;
 grant execute on function public.request_extension(uuid, date, text) to authenticated;

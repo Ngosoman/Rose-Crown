@@ -41,8 +41,39 @@ export async function createBookingRequest(values) {
     p_checkout: values.checkout,
     p_guest_name: values.guestName,
     p_guest_email: values.guestEmail,
+    p_guest_count: values.guestCount,
     p_guest_phone: values.guestPhone,
     p_special_requests: values.specialRequests,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function getUnitAvailability(unitId, checkIn, checkout) {
+  if (!supabase) return { available: null, error: new Error('Connect Supabase to check dates.') }
+  const { data, error } = await supabase.rpc('get_unit_availability', {
+    p_unit_id: unitId,
+    p_check_in: checkIn,
+    p_checkout: checkout,
+  })
+  return { available: data?.[0]?.available ?? false, error }
+}
+
+export async function cancelBooking(bookingId, reason = '') {
+  if (!supabase) throw new Error('Connect Supabase to manage bookings.')
+  const { data, error } = await supabase.rpc('cancel_booking', {
+    p_booking_id: bookingId,
+    p_reason: reason,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function recordCheckin(bookingId, notes = '') {
+  if (!supabase) throw new Error('Connect Supabase to manage bookings.')
+  const { data, error } = await supabase.rpc('record_checkin', {
+    p_booking_id: bookingId,
+    p_notes: notes,
   })
   if (error) throw error
   return data

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { z } from 'zod'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, ArrowRight, Check, Clock3, LockKeyhole } from 'lucide-react'
@@ -8,20 +7,13 @@ import { toast } from 'sonner'
 import { getProperties, createBookingRequest, listingPhotoUrl } from '../../Services/stayService'
 import { ConfigState, ErrorState, LoadingState } from '../../Components/Common/Feedback'
 import { formatMoney, formatStayDate, getUnitImage } from '../../Utils/format'
+import { bookingSchema } from '../../Utils/bookingSchema'
 
 const today = new Date().toISOString().slice(0, 10)
 
-const bookingSchema = z.object({
-  guestName: z.string().trim().min(2, 'Enter the guest name.'),
-  guestEmail: z.string().trim().email('Enter a valid email address.'),
-  guestPhone: z.string().trim().min(5, 'Enter a phone number.'),
-  checkIn: z.string().min(1, 'Choose a check-in date.'),
-  checkout: z.string().min(1, 'Choose a check-out date.'),
-  specialRequests: z.string().max(800, 'Keep requests under 800 characters.'),
-}).refine((value) => value.checkout > value.checkIn, { path: ['checkout'], message: 'Check-out must be after check-in.' })
-
 export default function BookingPage() {
   const { unitId } = useParams()
+  const [searchParams] = useSearchParams()
   const [unit, setUnit] = useState(null)
   const [loading, setLoading] = useState(true)
   const [configured, setConfigured] = useState(true)
@@ -29,7 +21,7 @@ export default function BookingPage() {
   const [booking, setBooking] = useState(null)
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(bookingSchema),
-    defaultValues: { guestName: '', guestEmail: '', guestPhone: '', checkIn: '', checkout: '', specialRequests: '' },
+    defaultValues: { guestName: '', guestEmail: '', guestPhone: '', guestCount: Number(searchParams.get('guests') || 1), checkIn: searchParams.get('checkIn') || '', checkout: searchParams.get('checkout') || '', specialRequests: '' },
   })
 
   useEffect(() => {
@@ -70,7 +62,7 @@ export default function BookingPage() {
           <div className="form-section-title"><span>01</span><h2>Your details</h2></div>
           <div className="form-grid"><label className="form-field"><span>Full name</span><input autoComplete="name" {...register('guestName')} aria-invalid={Boolean(errors.guestName)} />{errors.guestName && <small>{errors.guestName.message}</small>}</label><label className="form-field"><span>Email address</span><input type="email" autoComplete="email" {...register('guestEmail')} aria-invalid={Boolean(errors.guestEmail)} />{errors.guestEmail && <small>{errors.guestEmail.message}</small>}</label><label className="form-field"><span>Phone number</span><input type="tel" autoComplete="tel" {...register('guestPhone')} aria-invalid={Boolean(errors.guestPhone)} />{errors.guestPhone && <small>{errors.guestPhone.message}</small>}</label></div>
           <div className="form-section-title"><span>02</span><h2>Dates and details</h2></div>
-          <div className="form-grid"><label className="form-field"><span>Check in</span><input type="date" min={today} {...register('checkIn')} aria-invalid={Boolean(errors.checkIn)} />{errors.checkIn && <small>{errors.checkIn.message}</small>}</label><label className="form-field"><span>Check out</span><input type="date" min={today} {...register('checkout')} aria-invalid={Boolean(errors.checkout)} />{errors.checkout && <small>{errors.checkout.message}</small>}</label><label className="form-field form-field-wide"><span>Anything the host should know? <em>Optional</em></span><textarea rows="3" {...register('specialRequests')} />{errors.specialRequests && <small>{errors.specialRequests.message}</small>}</label></div>
+          <div className="form-grid"><label className="form-field"><span>Check in</span><input type="date" min={today} {...register('checkIn')} aria-invalid={Boolean(errors.checkIn)} />{errors.checkIn && <small>{errors.checkIn.message}</small>}</label><label className="form-field"><span>Check out</span><input type="date" min={today} {...register('checkout')} aria-invalid={Boolean(errors.checkout)} />{errors.checkout && <small>{errors.checkout.message}</small>}</label><label className="form-field"><span>Guests</span><select {...register('guestCount', { valueAsNumber: true })} aria-invalid={Boolean(errors.guestCount)}>{Array.from({ length: unit.capacity }, (_, index) => index + 1).map((count) => <option value={count} key={count}>{count} {count === 1 ? 'guest' : 'guests'}</option>)}</select>{errors.guestCount && <small>{errors.guestCount.message}</small>}</label><label className="form-field form-field-wide"><span>Anything the host should know? <em>Optional</em></span><textarea rows="3" {...register('specialRequests')} />{errors.specialRequests && <small>{errors.specialRequests.message}</small>}</label></div>
           <button className="button button-dark booking-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Sending request…' : 'Request this stay'} <ArrowRight size={17} /></button>
           <p className="form-privacy"><LockKeyhole size={14} /> Your details are only shared with this property.</p>
         </form>
