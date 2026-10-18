@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Activity, ArrowRight, Bell, CalendarDays, Check, CircleAlert, LogOut, RefreshCw, X } from 'lucide-react'
+import { Activity, ArrowRight, Bell, CalendarDays, Check, CircleAlert, LogOut, Plus, RefreshCw, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, supabaseConfigured } from '../../Lib/supabase'
-import { decideBooking, getStaffBookings, recordCheckout } from '../../Services/stayService'
+import { decideBooking, getNotifications, getStaffBookings, markNotificationRead, recordCheckin, recordCheckout } from '../../Services/stayService'
 import { ConfigState, EmptyState, ErrorState, LoadingState } from '../../Components/Common/Feedback'
+import ManualBookingForm from '../../Components/Booking/ManualBookingForm'
+import NotificationList from '../../Components/Common/NotificationList'
 import { formatMoney, formatStayDate, humanizeStatus } from '../../Utils/format'
 
 export default function StaffDashboard() {
@@ -12,6 +14,8 @@ export default function StaffDashboard() {
   const [roles, setRoles] = useState([])
   const [loading, setLoading] = useState(supabaseConfigured)
   const [bookings, setBookings] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [manualOpen, setManualOpen] = useState(false)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState('')
   const [view, setView] = useState('queue')
@@ -24,6 +28,12 @@ export default function StaffDashboard() {
     setError(queryError?.message ?? '')
   }
 
+  async function refreshNotifications() {
+    const { data, error: queryError } = await getNotifications()
+    setNotifications(data)
+    if (queryError) setError(queryError.message)
+  }
+
   useEffect(() => {
     if (!supabase) return undefined
     let current = true
@@ -33,14 +43,20 @@ export default function StaffDashboard() {
       setSession(currentSession)
       if (!currentSession) { setLoading(false); navigate('/auth', { state: { returnTo: '/manage' }, replace: true }); return }
       const { data: roleData, error: roleError } = await supabase.from('user_roles').select('role').eq('user_id', currentSession.user.id)
+      const { data: membershipData, error: membershipError } = await supabase.from('property_members').select('role').eq('user_id', currentSession.user.id)
       if (!current) return
-      setRoles(roleData ?? [])
-      if (roleError) setError(roleError.message)
-      if (roleData?.some(({ role }) => ['super_admin', 'property_manager', 'receptionist'].includes(role))) await refresh()
+      const assignedRoles = [...(roleData ?? []), ...(membershipData ?? [])]
+      setRoles(assignedRoles)
+      if (roleError || membershipError) setError(roleError?.message || membershipError?.message)
+      if (assignedRoles.some(({ role }) => ['super_admin', 'property_manager', 'receptionist'].includes(role))) {
+        await refresh()
+        await refreshNotifications()
+      }
       setLoading(false)
     })
     const channel = supabase.channel('staff-bookings').on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, refresh).subscribe()
-    return () => { current = false; supabase.removeChannel(channel) }
+    const notificationChannel = supabase.channel('staff-notifications').on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, refreshNotifications).subscribe()
+    return () => { current = false; supabase.removeChannel(channel); supabase.removeChannel(notificationChannel) }
   }, [navigate])
 
   async function decide(booking, approve) {
@@ -66,6 +82,21 @@ export default function StaffDashboard() {
     finally { setBusyId('') }
   }
 
+  async function checkin(booking) {
+    setBusyId(booking.id)
+    try {
+      await recordCheckin(booking.id)
+      toast.success('Check-in recorded.')
+      await refresh()
+    } catch (reason) { toast.error(reason.message || 'Check-in could not be recorded.') }
+    finally { setBusyId('') }
+  }
+
+  async function readNotification(notificationId) {
+    try { await markNotificationRead(notificationId); await refreshNotifications() }
+    catch (reason) { toast.error(reason.message || 'Notification could not be updated.') }
+  }
+
   if (!supabaseConfigured) return <section className="section-wrap admin-page"><ConfigState /></section>
   if (loading) return <section className="section-wrap admin-page"><LoadingState label="Checking property access" /></section>
   if (!session) return null
@@ -74,16 +105,20 @@ export default function StaffDashboard() {
   const pending = bookings.filter((booking) => booking.status === 'pending')
   const upcoming = bookings.filter((booking) => ['approved', 'checked_in'].includes(booking.status))
   const checkoutDue = bookings.filter((booking) => booking.status === 'checkout_due')
-  const shown = view === 'queue' ? pending : view === 'stays' ? upcoming : checkoutDue
+  const shown = view === 'queue' ? pending : view === 'stays' ? upcoming : view === 'checkout' ? checkoutDue : []
   const gross = bookings.filter((booking) => !['rejected', 'cancelled', 'expired'].includes(booking.status)).reduce((sum, booking) => sum + Number(booking.agreed_total || 0), 0)
 
   return <section className="admin-page section-wrap">
     <div className="admin-topline"><div><span className="eyebrow">StayEase / Property desk</span><h1>Good morning, <em>{session.user.user_metadata?.full_name?.split(' ')[0] || 'team'}.</em></h1><p>Bookings and arrivals across your assigned properties.</p></div><div className="admin-top-actions"><button className="icon-button" aria-label="Refresh booking data" onClick={() => refresh()}><RefreshCw size={17} /></button><button className="icon-button" aria-label="Sign out" onClick={() => supabase.auth.signOut()}><LogOut size={17} /></button></div></div>
     {error && <ErrorState message={error} />}
     <div className="metric-grid"><div className="metric-tile"><span><CalendarDays size={16} /> Active stays</span><strong>{upcoming.length}</strong><small>Approved and checked in</small></div><div className="metric-tile"><span><Bell size={16} /> Awaiting review</span><strong>{pending.length}</strong><small>Requests awaiting a decision</small></div><div className="metric-tile"><span><CircleAlert size={16} /> Checkout due</span><strong>{checkoutDue.length}</strong><small>Checkout needs recording</small></div><div className="metric-tile"><span><Activity size={16} /> Booked value</span><strong>{formatMoney(gross, bookings[0]?.currency || 'USD')}</strong><small>Current booking totals</small></div></div>
-    <div className="admin-workspace"><div className="workspace-heading"><div><span className="eyebrow">Operations</span><h2>{view === 'queue' ? 'Booking requests' : view === 'stays' ? 'Upcoming stays' : 'Checkout monitor'}</h2></div><div className="workspace-actions"><div className="segmented-control" role="tablist" aria-label="Booking view"><button role="tab" aria-selected={view === 'queue'} onClick={() => setView('queue')}>Requests <span>{pending.length}</span></button><button role="tab" aria-selected={view === 'stays'} onClick={() => setView('stays')}>Upcoming</button><button role="tab" aria-selected={view === 'checkout'} onClick={() => setView('checkout')}>Checkout <span>{checkoutDue.length}</span></button></div></div></div>
+    <div className="admin-toolbar"><button className="button button-dark" onClick={() => setManualOpen(!manualOpen)}>{manualOpen ? <X size={16} /> : <Plus size={16} />} {manualOpen ? 'Close manual booking' : 'Manual booking'}</button><span>Assigned property access is enforced by the database.</span></div>
+    {manualOpen && <ManualBookingForm onClose={() => setManualOpen(false)} onCreated={() => { setManualOpen(false); refresh() }} />}
+    <div className="admin-workspace"><div className="workspace-heading"><div><span className="eyebrow">Operations</span><h2>{view === 'queue' ? 'Booking requests' : view === 'stays' ? 'Upcoming stays' : view === 'checkout' ? 'Checkout monitor' : 'Notifications'}</h2></div><div className="workspace-actions"><div className="segmented-control" role="tablist" aria-label="Booking view"><button role="tab" aria-selected={view === 'queue'} onClick={() => setView('queue')}>Requests <span>{pending.length}</span></button><button role="tab" aria-selected={view === 'stays'} onClick={() => setView('stays')}>Upcoming</button><button role="tab" aria-selected={view === 'checkout'} onClick={() => setView('checkout')}>Checkout <span>{checkoutDue.length}</span></button><button role="tab" aria-selected={view === 'alerts'} onClick={() => setView('alerts')}>Alerts <span>{notifications.filter((notification) => notification.delivery_status === 'failed').length}</span></button></div></div></div>
+      {view === 'alerts' ? <NotificationList notifications={notifications} onRead={readNotification} showDelivery /> : <>
       {shown.length === 0 && <EmptyState title={view === 'queue' ? 'All caught up' : view === 'checkout' ? 'No checkout actions due' : 'Nothing on the calendar yet'} body={view === 'queue' ? 'New guest requests will appear here.' : view === 'checkout' ? 'When an in-house guest reaches checkout time, it will be listed here for staff action.' : 'Approved stays will appear here.'} />}
-      {shown.length > 0 && <div className="admin-booking-list">{shown.map((booking) => <article className="admin-booking-row" key={booking.id}><div className="admin-booking-main"><div className="booking-date-block"><span>{new Intl.DateTimeFormat(undefined, { month: 'short' }).format(new Date(booking.check_in))}</span><strong>{new Intl.DateTimeFormat(undefined, { day: '2-digit' }).format(new Date(booking.check_in))}</strong></div><div className="admin-booking-details"><div className="admin-booking-title"><h3>{booking.guest_name}</h3><span className={`status-pill status-${booking.status}`}>{humanizeStatus(booking.status)}</span></div><p>{booking.unit?.property?.name || 'Property'} · {booking.unit?.name || 'Unit'} · Ref. {booking.reference}</p><div className="admin-booking-meta"><span>{formatStayDate(booking.check_in)} – {formatStayDate(booking.checkout)}</span><span>{booking.guest_email}</span><span>{humanizeStatus(booking.source)}</span></div></div><div className="admin-booking-price"><strong>{formatMoney(booking.agreed_total, booking.currency)}</strong><span>{humanizeStatus(booking.payment_status)} payment</span></div></div><div className="admin-row-actions">{booking.status === 'pending' && <><button className="button button-confirm" disabled={busyId === booking.id} onClick={() => decide(booking, true)}><Check size={15} /> Approve</button><button className="button button-reject" disabled={busyId === booking.id} onClick={() => decide(booking, false)}><X size={15} /> Reject</button></>}{booking.status === 'checkout_due' && <button className="button button-dark" disabled={busyId === booking.id} onClick={() => checkout(booking)}>Record checkout <ArrowRight size={15} /></button>}</div></article>)}</div>}
+      {shown.length > 0 && <div className="admin-booking-list">{shown.map((booking) => <article className="admin-booking-row" key={booking.id}><div className="admin-booking-main"><div className="booking-date-block"><span>{new Intl.DateTimeFormat(undefined, { month: 'short' }).format(new Date(booking.check_in))}</span><strong>{new Intl.DateTimeFormat(undefined, { day: '2-digit' }).format(new Date(booking.check_in))}</strong></div><div className="admin-booking-details"><div className="admin-booking-title"><h3>{booking.guest_name}</h3><span className={`status-pill status-${booking.status}`}>{humanizeStatus(booking.status)}</span></div><p>{booking.unit?.property?.name || 'Property'} · {booking.unit?.name || 'Unit'} · Ref. {booking.reference}</p><div className="admin-booking-meta"><span>{formatStayDate(booking.check_in)} – {formatStayDate(booking.checkout)}</span><span>{booking.guest_email}</span><span>{humanizeStatus(booking.source)}</span></div></div><div className="admin-booking-price"><strong>{formatMoney(booking.agreed_total, booking.currency)}</strong><span>{humanizeStatus(booking.payment_status)} payment</span></div></div><div className="admin-row-actions">{booking.status === 'pending' && <><button className="button button-confirm" disabled={busyId === booking.id} onClick={() => decide(booking, true)}><Check size={15} /> Approve</button><button className="button button-reject" disabled={busyId === booking.id} onClick={() => decide(booking, false)}><X size={15} /> Reject</button></>}{booking.status === 'approved' && <button className="button button-confirm" disabled={busyId === booking.id} onClick={() => checkin(booking)}>Record check-in</button>}{['checked_in', 'checkout_due'].includes(booking.status) && <button className="button button-dark" disabled={busyId === booking.id} onClick={() => checkout(booking)}>Record checkout <ArrowRight size={15} /></button>}</div></article>)}</div>}
+      </>}
     </div>
     <div className="admin-bottom-note"><span><Activity size={15} /> Changes are applied by the database booking workflow.</span><span>Signed in as {session.user.email}</span></div>
   </section>
