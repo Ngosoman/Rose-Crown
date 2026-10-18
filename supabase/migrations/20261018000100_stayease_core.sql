@@ -39,6 +39,20 @@ create table public.properties (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create or replace function public.validate_property_timezone()
+returns trigger language plpgsql set search_path = ''
+as $$
+begin
+  if not exists (select 1 from pg_catalog.pg_timezone_names where name = new.timezone) then
+    raise exception 'Property timezone must be a valid IANA timezone' using errcode = '22023';
+  end if;
+  return new;
+end $$;
+create trigger validate_property_timezone_before_write
+before insert or update of timezone on public.properties
+for each row execute function public.validate_property_timezone();
+revoke all on function public.validate_property_timezone() from public;
 create table public.property_members (
   property_id uuid not null references public.properties(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -228,6 +242,7 @@ as $$ begin
   return new;
 end $$;
 create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
+revoke all on function public.handle_new_user() from public;
 
 create or replace function public.is_super_admin()
 returns boolean language sql stable security definer set search_path = ''
