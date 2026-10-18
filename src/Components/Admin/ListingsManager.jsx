@@ -84,7 +84,7 @@ export default function ListingsManager({ isSuperAdmin, canManageListings }) {
     setError('')
     try {
       const { amenityIds, ...unitValues } = values
-      const saved = await saveUnit({ ...unitValues, property_id: selectedPropertyId }, editingUnit?.id)
+      const saved = await saveUnit({ ...unitValues, property_id: property.id }, editingUnit?.id)
       await replaceUnitAmenities(saved.id, amenityIds)
       await refresh()
       setUnitEditorOpen(false)
@@ -139,7 +139,7 @@ export default function ListingsManager({ isSuperAdmin, canManageListings }) {
     {!property && !propertyEditorOpen && <EmptyState title="No assigned properties yet" body={isSuperAdmin ? 'Create your first property to begin adding bookable units.' : 'Ask a super-admin to create a property and assign it to your account.'} />}
     {isSuperAdmin && <div className="listings-toolbar">{propertyEditorOpen ? <button className="button button-outline" onClick={() => { setPropertyEditorOpen(false); setEditingProperty(null) }}><ArrowLeft size={15} /> Back to listings</button> : <button className="button button-dark" onClick={() => { setEditingProperty(property ?? null); setPropertyEditorOpen(true) }}><Plus size={16} /> {property ? 'Edit property' : 'Create property'}</button>}</div>}
     {propertyEditorOpen && isSuperAdmin && <PropertyForm property={editingProperty} onSave={savePropertyDetails} onCancel={() => { setPropertyEditorOpen(false); setEditingProperty(null) }} busy={busy} />}
-    {!propertyEditorOpen && properties.length > 0 && <div className="listing-property-select"><label className="form-field"><span>Property</span><select value={selectedPropertyId} onChange={(event) => setSelectedPropertyId(event.target.value)}>{properties.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.city || 'No city'}</option>)}</select></label><span><MapPin size={14} /> {property?.timezone} · {property?.currency}</span></div>}
+    {!propertyEditorOpen && properties.length > 0 && <div className="listing-property-select"><label className="form-field"><span>Property</span><select value={selectedPropertyId || property?.id || ''} onChange={(event) => setSelectedPropertyId(event.target.value)}>{properties.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.city || 'No city'}</option>)}</select></label><span><MapPin size={14} /> {property?.timezone} · {property?.currency}</span></div>}
     {property && !propertyEditorOpen && <>
       <div className="listing-property-heading"><div><span className="eyebrow">{property.published ? 'Published listing' : 'Draft listing'}</span><h2>{property.name}</h2><p>{property.description || property.address || property.city || 'No property description yet.'}</p></div>{canManageListings && <button className="button button-dark" onClick={() => { setEditingUnit(null); setUnitEditorOpen(true) }}><Plus size={16} /> Add unit</button>}</div>
       {unitEditorOpen && canManageListings && <UnitForm property={property} unit={editingUnit} amenities={amenities} onSave={saveUnitDetails} onCancel={() => { setUnitEditorOpen(false); setEditingUnit(null) }} busy={busy} />}
