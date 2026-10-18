@@ -149,6 +149,20 @@ h1, h2, h3 { color: var(--ink); }
 .date-range-label { color: var(--sage); }
 .filter-control { height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line); color: var(--sage); }
 .filter-control select { border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 11px; }
+.expanded-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.expanded-filters .filter-control { gap: 7px; }
+.expanded-filters .filter-control > span:not(.sr-only) { color: var(--ink-soft); font-size: 9px; }
+.expanded-filters .filter-control input { width: 74px; border: 0; outline: 0; background: transparent; font-size: 11px; }
+.amenity-filter { position: relative; }
+.amenity-filter summary { min-height: 38px; display: flex; align-items: center; padding: 0 11px; border: 1px solid var(--line); color: var(--ink); font-size: 10px; cursor: pointer; list-style: none; }
+.amenity-filter summary::-webkit-details-marker { display: none; }
+.amenity-filter summary::after { content: '+'; margin-left: 12px; color: var(--sage); }
+.amenity-filter[open] summary::after { content: '-'; }
+.amenity-options { position: absolute; top: calc(100% + 5px); left: 0; z-index: 5; min-width: 190px; max-height: 250px; display: grid; gap: 3px; overflow: auto; padding: 9px; border: 1px solid var(--line); background: white; box-shadow: var(--shadow); }
+.amenity-options label { display: flex; align-items: center; gap: 7px; padding: 6px 4px; color: var(--ink); font-size: 10px; cursor: pointer; }
+.amenity-options input { accent-color: var(--sage); }
+.amenity-options > span { padding: 5px; color: var(--ink-soft); font-size: 9px; }
+.clear-filters { min-height: 34px; margin-left: auto; font-size: 10px; }
 .search-results { border-bottom: 1px solid var(--line); }
 .result-row { display: grid; grid-template-columns: 230px minmax(0, 1fr) 165px; gap: 23px; padding: 20px 0; border-top: 1px solid var(--line); }
 .result-photo { display: block; min-height: 160px; aspect-ratio: 1.43; overflow: hidden; background: var(--paper-deep); }
@@ -480,6 +494,10 @@ h1, h2, h3 { color: var(--ink); }
   .results-toolbar { font-size: 10px; }
   .filter-control { gap: 4px; padding: 0 5px; }
   .filter-control select { max-width: 105px; font-size: 9px; }
+  .expanded-filters { gap: 6px; }
+  .expanded-filters .filter-control { padding-inline: 7px; }
+  .expanded-filters .filter-control input { width: 54px; }
+  .clear-filters { margin-left: 0; }
   .date-range-label { display: none; }
   .result-row { grid-template-columns: 105px minmax(0,1fr); gap: 12px; padding: 14px 0; }
   .result-photo { grid-row: span 2; min-height: 105px; aspect-ratio: 1; }

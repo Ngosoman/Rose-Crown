@@ -13,10 +13,15 @@ export default function StaySearchPage() {
   const [error, setError] = useState('')
   const [availability, setAvailability] = useState(null)
   const [unitType, setUnitType] = useState('all')
+  const [currency, setCurrency] = useState('all')
+  const [priceLimit, setPriceLimit] = useState('')
+  const [selectedAmenities, setSelectedAmenities] = useState([])
   const city = params.get('city') ?? ''
   const checkIn = params.get('checkIn') ?? ''
   const checkout = params.get('checkout') ?? ''
   const guests = Number(params.get('guests') || 1)
+  const currencies = useMemo(() => [...new Set(properties.flatMap((property) => property.units.map((unit) => unit.currency)))].sort(), [properties])
+  const amenities = useMemo(() => [...new Set(properties.flatMap((property) => property.units.flatMap((unit) => (unit.unit_amenities ?? []).map(({ amenities: item }) => item?.name).filter(Boolean))))].sort(), [properties])
   const dateKey = checkIn && checkout > checkIn ? `${checkIn}:${checkout}` : ''
   const availabilityData = availability?.dateKey === dateKey ? availability.units : null
   const checkingDates = Boolean(dateKey && properties.length > 0 && !availabilityData)
@@ -47,9 +52,12 @@ export default function StaySearchPage() {
 
   const results = useMemo(() => properties.flatMap((property) => property.units
     .filter((unit) => unit.capacity >= guests && (unitType === 'all' || unit.unit_type === unitType))
+    .filter((unit) => currency === 'all' || unit.currency === currency)
+    .filter((unit) => !priceLimit || Number(unit.base_nightly_price) <= Number(priceLimit))
+    .filter((unit) => selectedAmenities.every((name) => unit.unit_amenities?.some(({ amenities: item }) => item?.name === name)))
     .filter((unit) => !dateKey || availabilityData?.[unit.id] === true)
     .map((unit) => ({ ...unit, property })))
-    .filter(({ property }) => !city || `${property.city} ${property.name} ${property.address}`.toLowerCase().includes(city.toLowerCase())), [properties, guests, unitType, city, dateKey, availabilityData])
+    .filter(({ property }) => !city || `${property.city} ${property.name} ${property.address}`.toLowerCase().includes(city.toLowerCase())), [properties, guests, unitType, city, dateKey, availabilityData, currency, priceLimit, selectedAmenities])
 
   function propertyHref(slug, unitId = '') {
     const query = new URLSearchParams()
@@ -64,6 +72,7 @@ export default function StaySearchPage() {
   return <section className="search-page section-wrap">
     <div className="page-intro"><span className="eyebrow">Stay collection</span><h1>Find your <em>somewhere.</em></h1><p>Small, considered places that make getting away feel effortless.</p></div>
     <div className="results-toolbar"><div><strong>{loading ? '—' : results.length}</strong> stays {city && <span>in <b>{city}</b></span>}{checkIn && checkout && <span className="date-range-label"> · {checkIn} — {checkout}</span>}</div><label className="filter-control"><SlidersHorizontal size={16} /><span className="sr-only">Filter by stay type</span><select aria-label="Filter by stay type" value={unitType} onChange={(event) => setUnitType(event.target.value)}><option value="all">All stay types</option><option value="apartment">Apartments</option><option value="studio">Studios</option><option value="room">Rooms</option></select></label></div>
+    <div className="expanded-filters"><label className="filter-control"><span>Currency</span><select aria-label="Filter by currency" value={currency} onChange={(event) => setCurrency(event.target.value)}><option value="all">All currencies</option>{currencies.map((code) => <option key={code} value={code}>{code}</option>)}</select></label><label className="filter-control"><span>Max starting rate</span><input type="number" min="0" inputMode="decimal" placeholder="Any" aria-label="Maximum starting nightly rate" value={priceLimit} onChange={(event) => setPriceLimit(event.target.value)} /></label><details className="amenity-filter"><summary>Amenities{selectedAmenities.length > 0 ? ` (${selectedAmenities.length})` : ''}</summary><div className="amenity-options">{amenities.length === 0 ? <span>No amenities published</span> : amenities.map((name) => <label key={name}><input type="checkbox" checked={selectedAmenities.includes(name)} onChange={(event) => setSelectedAmenities((current) => event.target.checked ? [...current, name] : current.filter((item) => item !== name))} /> {name}</label>)}</div></details><button className="plain-button clear-filters" onClick={() => { setUnitType('all'); setCurrency('all'); setPriceLimit(''); setSelectedAmenities([]) }}>Clear filters</button></div>
     {loading && <LoadingState label="Loading stays" />}
     {!loading && !configured && <ConfigState />}
     {!loading && error && <ErrorState message={error} />}

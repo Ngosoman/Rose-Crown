@@ -17,11 +17,11 @@ export async function getProperty(slug) {
   if (!supabase) return { data: null, error: null, configured: false }
   const { data, error } = await supabase
     .from('properties')
-    .select('id,name,slug,description,address,city,timezone,currency,check_in_time,checkout_time,units(id,name,unit_type,capacity,bedrooms,bathrooms,description,base_nightly_price,currency,unit_photos(id,storage_path,alt_text,sort_order),unit_amenities(amenities(name)))')
+    .select('id,name,slug,description,address,city,timezone,currency,check_in_time,checkout_time,units(id,name,unit_type,capacity,bedrooms,bathrooms,description,base_nightly_price,currency,active,unit_photos(id,storage_path,alt_text,sort_order),unit_amenities(amenities(name)))')
     .eq('slug', slug)
     .eq('published', true)
     .maybeSingle()
-  return { data: data ? { ...data, units: data.units ?? [] } : null, error, configured: true }
+  return { data: data ? { ...data, units: (data.units ?? []).filter((unit) => unit.active) } : null, error, configured: true }
 }
 
 export async function getGuestBookings() {
