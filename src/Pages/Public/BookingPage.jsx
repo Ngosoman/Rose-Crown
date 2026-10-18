@@ -5,10 +5,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, ArrowRight, Check, Clock3, LockKeyhole } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '../../Lib/supabase'
 import { getProperties, createBookingRequest, listingPhotoUrl } from '../../Services/stayService'
 import { ConfigState, ErrorState, LoadingState } from '../../Components/Common/Feedback'
-import { formatMoney, getUnitImage } from '../../Utils/format'
+import { formatMoney, formatStayDate, getUnitImage } from '../../Utils/format'
+
+const today = new Date().toISOString().slice(0, 10)
 
 const bookingSchema = z.object({
   guestName: z.string().trim().min(2, 'Enter the guest name.'),
@@ -62,14 +63,14 @@ export default function BookingPage() {
 
   return <section className="booking-page section-wrap">
     <Link className="back-link" to={`/stays/${unit.property.slug}`}><ArrowLeft size={15} /> Back to {unit.property.name}</Link>
-    {booking ? <div className="booking-success"><span className="success-icon"><Check size={25} /></span><span className="eyebrow">Request received</span><h1>Your stay is <em>in motion.</em></h1><p>This is a request, not a confirmed booking. The property will review it before your 15-minute hold expires.</p><div className="reference-panel"><span>Booking reference</span><strong>{booking.reference}</strong><span>Hold expires {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(booking.hold_expires_at))}</span></div><div className="success-actions"><Link className="button button-dark" to="/my-stays">View my stays <ArrowRight size={16} /></Link><Link className="text-link" to="/stays">Keep exploring</Link></div><p className="small-note">Payment status: pending. No payment has been taken.</p></div> : <div className="booking-grid">
+    {booking ? <div className="booking-success"><span className="success-icon"><Check size={25} /></span><span className="eyebrow">Request received</span><h1>Your stay is <em>in motion.</em></h1><p>This is a request, not a confirmed booking. The property will review it before your 15-minute hold expires.</p><div className="reference-panel"><span>Booking reference</span><strong>{booking.reference}</strong><span>Hold expires {formatStayDate(booking.hold_expires_at, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span></div><div className="success-actions"><Link className="button button-dark" to="/my-stays">View my stays <ArrowRight size={16} /></Link><Link className="text-link" to="/stays">Keep exploring</Link></div><p className="small-note">Payment status: pending. No payment has been taken.</p></div> : <div className="booking-grid">
       <div className="booking-form-column"><span className="eyebrow">Almost somewhere new</span><h1>Request this <em>stay.</em></h1><p className="booking-lede">Tell us who is traveling and when. Your request is held for 15 minutes while the host reviews it.</p>
         {error && <ErrorState message={error} />}
         <form className="booking-form" onSubmit={handleSubmit(submit)} noValidate>
           <div className="form-section-title"><span>01</span><h2>Your details</h2></div>
           <div className="form-grid"><label className="form-field"><span>Full name</span><input autoComplete="name" {...register('guestName')} aria-invalid={Boolean(errors.guestName)} />{errors.guestName && <small>{errors.guestName.message}</small>}</label><label className="form-field"><span>Email address</span><input type="email" autoComplete="email" {...register('guestEmail')} aria-invalid={Boolean(errors.guestEmail)} />{errors.guestEmail && <small>{errors.guestEmail.message}</small>}</label><label className="form-field"><span>Phone number</span><input type="tel" autoComplete="tel" {...register('guestPhone')} aria-invalid={Boolean(errors.guestPhone)} />{errors.guestPhone && <small>{errors.guestPhone.message}</small>}</label></div>
           <div className="form-section-title"><span>02</span><h2>Dates and details</h2></div>
-          <div className="form-grid"><label className="form-field"><span>Check in</span><input type="date" min={new Date().toISOString().slice(0, 10)} {...register('checkIn')} aria-invalid={Boolean(errors.checkIn)} />{errors.checkIn && <small>{errors.checkIn.message}</small>}</label><label className="form-field"><span>Check out</span><input type="date" min={new Date().toISOString().slice(0, 10)} {...register('checkout')} aria-invalid={Boolean(errors.checkout)} />{errors.checkout && <small>{errors.checkout.message}</small>}</label><label className="form-field form-field-wide"><span>Anything the host should know? <em>Optional</em></span><textarea rows="3" {...register('specialRequests')} />{errors.specialRequests && <small>{errors.specialRequests.message}</small>}</label></div>
+          <div className="form-grid"><label className="form-field"><span>Check in</span><input type="date" min={today} {...register('checkIn')} aria-invalid={Boolean(errors.checkIn)} />{errors.checkIn && <small>{errors.checkIn.message}</small>}</label><label className="form-field"><span>Check out</span><input type="date" min={today} {...register('checkout')} aria-invalid={Boolean(errors.checkout)} />{errors.checkout && <small>{errors.checkout.message}</small>}</label><label className="form-field form-field-wide"><span>Anything the host should know? <em>Optional</em></span><textarea rows="3" {...register('specialRequests')} />{errors.specialRequests && <small>{errors.specialRequests.message}</small>}</label></div>
           <button className="button button-dark booking-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Sending request…' : 'Request this stay'} <ArrowRight size={17} /></button>
           <p className="form-privacy"><LockKeyhole size={14} /> Your details are only shared with this property.</p>
         </form>

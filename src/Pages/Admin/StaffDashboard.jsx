@@ -10,7 +10,7 @@ import { formatMoney, formatStayDate, humanizeStatus } from '../../Utils/format'
 export default function StaffDashboard() {
   const [session, setSession] = useState(null)
   const [roles, setRoles] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(supabaseConfigured)
   const [bookings, setBookings] = useState([])
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState('')
@@ -25,7 +25,7 @@ export default function StaffDashboard() {
   }
 
   useEffect(() => {
-    if (!supabase) { setLoading(false); return undefined }
+    if (!supabase) return undefined
     let current = true
     supabase.auth.getSession().then(async ({ data }) => {
       if (!current) return

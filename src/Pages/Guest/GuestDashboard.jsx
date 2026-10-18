@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, CalendarDays, Clock3, LogIn, RefreshCw } from 'lucide-react'
+import { ArrowRight, CalendarDays, Clock3, RefreshCw } from 'lucide-react'
 import { supabase, supabaseConfigured } from '../../Lib/supabase'
 import { getGuestBookings } from '../../Services/stayService'
 import { ConfigState, EmptyState, ErrorState, LoadingState } from '../../Components/Common/Feedback'
@@ -8,14 +8,14 @@ import { formatMoney, formatStayDate, humanizeStatus } from '../../Utils/format'
 
 export default function GuestDashboard() {
   const [session, setSession] = useState(null)
-  const [authLoading, setAuthLoading] = useState(true)
+  const [authLoading, setAuthLoading] = useState(supabaseConfigured)
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!supabase) { setAuthLoading(false); setLoading(false); return undefined }
+    if (!supabase) return undefined
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setAuthLoading(false)
@@ -26,7 +26,7 @@ export default function GuestDashboard() {
   }, [navigate])
 
   useEffect(() => {
-    if (!session) { setLoading(false); return undefined }
+    if (!session) return undefined
     let current = true
     getGuestBookings().then(({ data, error: queryError }) => {
       if (!current) return

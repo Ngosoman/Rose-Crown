@@ -4,7 +4,7 @@ export async function getProperties() {
   if (!supabase) return { data: [], error: null, configured: false }
   const { data, error } = await supabase
     .from('properties')
-    .select('id,name,slug,description,address,city,timezone,currency,units(id,name,unit_type,capacity,bedrooms,bathrooms,description,base_nightly_price,currency,unit_photos(id,storage_path,alt_text,sort_order),unit_amenities(amenities(name)))')
+    .select('id,name,slug,description,address,city,timezone,currency,units(id,name,unit_type,capacity,bedrooms,bathrooms,description,base_nightly_price,currency,active,unit_photos(id,storage_path,alt_text,sort_order),unit_amenities(amenities(name)))')
     .eq('published', true)
     .order('name')
   return { data: (data ?? []).map((property) => ({

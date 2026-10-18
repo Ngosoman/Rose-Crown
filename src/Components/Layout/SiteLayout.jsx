@@ -2,6 +2,8 @@ import { Link, NavLink, Outlet } from 'react-router-dom'
 import { BedDouble, CircleUserRound, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
+const currentYear = new Date().getFullYear()
+
 export default function SiteLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
@@ -17,7 +19,7 @@ export default function SiteLayout() {
         <Link className="header-account" to="/auth"><CircleUserRound size={18} /><span>Sign in</span></Link>
       </header>
       <main><Outlet /></main>
-      <footer className="site-footer"><Link className="brand brand-small" to="/"><span className="brand-mark"><BedDouble size={16} /></span><span>StayEase</span></Link><p>Thoughtful stays, made simple.</p><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/contact">Contact</Link></div><small>© {new Date().getFullYear()} StayEase</small></footer>
+      <footer className="site-footer"><Link className="brand brand-small" to="/"><span className="brand-mark"><BedDouble size={16} /></span><span>StayEase</span></Link><p>Thoughtful stays, made simple.</p><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/contact">Contact</Link></div><small>© {currentYear} StayEase</small></footer>
     </div>
   )
 }

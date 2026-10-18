@@ -6,6 +6,7 @@ import { ConfigState, EmptyState, ErrorState, LoadingState } from '../../Compone
 import { formatMoney, getUnitImage } from '../../Utils/format'
 
 const heroImage = 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=2200&q=85'
+const today = new Date().toISOString().slice(0, 10)
 
 export default function HomePage() {
   const [properties, setProperties] = useState([])
@@ -47,8 +48,8 @@ export default function HomePage() {
         <div className="hero-side-note"><span>01 / 03</span><span>Spaces that feel like yours</span></div>
         <form className="search-panel" onSubmit={search}>
           <label className="search-field"><span><MapPin size={16} /> Destination</span><input aria-label="Destination" placeholder="City or neighborhood" value={destination} onChange={(event) => setDestination(event.target.value)} /></label>
-          <label className="search-field"><span><CalendarDays size={16} /> Check in</span><input aria-label="Check in" type="date" min={new Date().toISOString().slice(0, 10)} value={checkIn} onChange={(event) => setCheckIn(event.target.value)} /></label>
-          <label className="search-field"><span><CalendarDays size={16} /> Check out</span><input aria-label="Check out" type="date" min={checkIn || new Date().toISOString().slice(0, 10)} value={checkout} onChange={(event) => setCheckout(event.target.value)} /></label>
+          <label className="search-field"><span><CalendarDays size={16} /> Check in</span><input aria-label="Check in" type="date" min={today} value={checkIn} onChange={(event) => setCheckIn(event.target.value)} /></label>
+          <label className="search-field"><span><CalendarDays size={16} /> Check out</span><input aria-label="Check out" type="date" min={checkIn || today} value={checkout} onChange={(event) => setCheckout(event.target.value)} /></label>
           <label className="search-field guests-field"><span><Users size={16} /> Guests</span><select aria-label="Guests" value={guests} onChange={(event) => setGuests(event.target.value)}>{[1, 2, 3, 4, 5, 6, 7, 8].map((count) => <option key={count} value={count}>{count} {count === 1 ? 'guest' : 'guests'}</option>)}</select></label>
           <button className="button button-dark search-submit" type="submit"><Search size={18} /><span>Explore stays</span></button>
         </form>

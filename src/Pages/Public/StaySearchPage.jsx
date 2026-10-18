@@ -6,7 +6,7 @@ import { ConfigState, EmptyState, ErrorState, LoadingState } from '../../Compone
 import { formatMoney, getUnitImage } from '../../Utils/format'
 
 export default function StaySearchPage() {
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const [properties, setProperties] = useState([])
   const [loading, setLoading] = useState(true)
   const [configured, setConfigured] = useState(true)
