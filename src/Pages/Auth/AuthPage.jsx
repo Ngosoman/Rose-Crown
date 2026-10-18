@@ -15,6 +15,12 @@ export default function AuthPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const requestedReturnTo = location.state?.returnTo
+  const safeReturnTo = typeof requestedReturnTo === 'string'
+    && requestedReturnTo.startsWith('/')
+    && !requestedReturnTo.startsWith('//')
+    ? requestedReturnTo
+    : '/my-stays'
+  const guestDestination = safeReturnTo === '/manage' ? '/my-stays' : safeReturnTo
 
   async function submit(event) {
     event.preventDefault()
@@ -27,7 +33,7 @@ export default function AuthPage() {
         if (!data.session) {
           toast.success('Check your email to finish creating your account.')
           setMode('sign-in')
-        } else navigate(returnTo, { replace: true })
+        } else navigate(guestDestination, { replace: true })
       } else if (mode === 'reset') {
         const { error: authError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth` })
         if (authError) throw authError
@@ -49,12 +55,7 @@ export default function AuthPage() {
 
         const roles = [...(roleResult.data ?? []), ...(membershipResult.data ?? [])]
         const isStaff = roles.some(({ role }) => ['super_admin', 'property_manager', 'receptionist'].includes(role))
-        const safeReturnTo = typeof requestedReturnTo === 'string'
-          && requestedReturnTo.startsWith('/')
-          && !requestedReturnTo.startsWith('//')
-          ? requestedReturnTo
-          : '/my-stays'
-        navigate(isStaff ? '/manage' : safeReturnTo === '/manage' ? '/my-stays' : safeReturnTo, { replace: true })
+        navigate(isStaff ? '/manage' : guestDestination, { replace: true })
       }
     } catch (reason) {
       setError(reason.message || 'Authentication failed.')
