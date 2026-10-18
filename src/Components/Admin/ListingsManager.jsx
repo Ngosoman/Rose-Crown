@@ -12,7 +12,7 @@ import {
   saveUnit,
   uploadUnitPhoto,
 } from '../../Services/stayService'
-import { ConfigState, EmptyState, ErrorState, LoadingState } from '../Common/Feedback'
+import { EmptyState, ErrorState, LoadingState } from '../Common/Feedback'
 import { formatMoney } from '../../Utils/format'
 import PropertyForm from './PropertyForm'
 import RateRuleForm from './RateRuleForm'
@@ -31,7 +31,7 @@ export default function ListingsManager({ isSuperAdmin }) {
   const [error, setError] = useState('')
   const [photoAlt, setPhotoAlt] = useState({})
   const [rateUnitId, setRateUnitId] = useState('')
-  const property = properties.find((item) => item.id === selectedPropertyId)
+  const property = properties.find((item) => item.id === selectedPropertyId) ?? properties[0]
 
   async function refresh() {
     const [propertyResult, amenityResult] = await Promise.all([getStaffProperties(), getAmenities()])
@@ -39,7 +39,6 @@ export default function ListingsManager({ isSuperAdmin }) {
     if (amenityResult.error) throw amenityResult.error
     setProperties(propertyResult.data)
     setAmenities(amenityResult.data)
-    setSelectedPropertyId((current) => current || propertyResult.data[0]?.id || '')
   }
 
   useEffect(() => {
