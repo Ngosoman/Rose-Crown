@@ -92,7 +92,7 @@ create index rate_rule_dates_idx on public.unit_rate_rules(unit_id, date_from, d
 
 create table public.bookings (
   id uuid primary key default gen_random_uuid(),
-  reference text not null unique default upper(encode(extensions.gen_random_bytes(5), 'hex')),
+  reference text not null unique default upper(encode(extensions.gen_random_bytes(10), 'hex')),
   unit_id uuid not null references public.units(id) on delete restrict,
   guest_id uuid references auth.users(id) on delete set null,
   guest_name text not null,
@@ -276,8 +276,13 @@ begin
   update public.unit_reservations r set released_at = now()
     where r.unit_id = v_unit.id and r.status = 'held' and r.released_at is null
       and exists (select 1 from public.bookings b where b.id = r.booking_id and b.hold_expires_at <= now() and b.status = 'pending');
-  update public.bookings set status = 'expired', updated_at = now()
-    where unit_id = v_unit.id and status = 'pending' and hold_expires_at <= now();
+  with expired as (
+    update public.bookings set status = 'expired', updated_at = now()
+    where unit_id = v_unit.id and status = 'pending' and hold_expires_at <= now()
+    returning id
+  )
+  insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id, reason)
+    select id, 'pending', 'expired', (select auth.uid()), 'Temporary hold expired' from expired;
   if exists (select 1 from public.unit_blocks b where b.unit_id = v_unit.id and b.stay && daterange(p_check_in, p_checkout, '[)'))
      or exists (select 1 from public.unit_reservations r where r.unit_id = v_unit.id and r.released_at is null and r.stay && daterange(p_check_in, p_checkout, '[)')) then
     raise exception 'Those dates are no longer available' using errcode = 'P0001';
@@ -318,7 +323,13 @@ begin
   select * into v_property from public.properties where id = v_unit.property_id;
   if p_check_in <= (now() at time zone v_property.timezone)::date then raise exception 'Check-in must be a future local date' using errcode = '22023'; end if;
   update public.unit_reservations r set released_at = now() where r.unit_id = v_unit.id and r.status = 'held' and r.released_at is null and exists (select 1 from public.bookings b where b.id = r.booking_id and b.hold_expires_at <= now() and b.status = 'pending');
-  update public.bookings set status = 'expired', updated_at = now() where unit_id = v_unit.id and status = 'pending' and hold_expires_at <= now();
+  with expired as (
+    update public.bookings set status = 'expired', updated_at = now()
+    where unit_id = v_unit.id and status = 'pending' and hold_expires_at <= now()
+    returning id
+  )
+  insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id, reason)
+    select id, 'pending', 'expired', (select auth.uid()), 'Temporary hold expired' from expired;
   if exists (select 1 from public.unit_blocks b where b.unit_id = v_unit.id and b.stay && daterange(p_check_in, p_checkout, '[)')) or exists (select 1 from public.unit_reservations r where r.unit_id = v_unit.id and r.released_at is null and r.stay && daterange(p_check_in, p_checkout, '[)')) then raise exception 'Those dates are unavailable' using errcode = 'P0001'; end if;
   for v_night in select generate_series(p_check_in, p_checkout - 1, interval '1 day')::date loop
     select coalesce((select rr.nightly_price from public.unit_rate_rules rr where rr.unit_id = v_unit.id and rr.date_from <= v_night and rr.date_to > v_night order by rr.priority desc, rr.date_from desc, rr.id limit 1), v_unit.base_nightly_price) into v_rate;

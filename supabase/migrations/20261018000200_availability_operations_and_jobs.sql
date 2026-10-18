@@ -12,21 +12,29 @@ create or replace function public.get_unit_availability(p_unit_id uuid, p_check_
 returns table (unit_id uuid, available boolean)
 language plpgsql security definer set search_path = ''
 as $$
-declare v_unit public.units%rowtype;
+declare v_unit public.units%rowtype; v_property public.properties%rowtype;
 begin
-  if p_check_in is null or p_checkout is null or p_checkout <= p_check_in or p_check_in < current_date then
+  if p_check_in is null or p_checkout is null or p_checkout <= p_check_in then
     raise exception 'Choose a valid future stay' using errcode = '22023';
   end if;
   select * into v_unit from public.units where id = p_unit_id and active for update;
-  if not found or not exists (select 1 from public.properties p where p.id = v_unit.property_id and p.published) then
+  if not found then
     return query select p_unit_id, false;
     return;
   end if;
+  select * into v_property from public.properties p where p.id = v_unit.property_id and p.published;
+  if not found then return query select p_unit_id, false; return; end if;
+  if p_check_in <= (now() at time zone v_property.timezone)::date then raise exception 'Check-in must be a future local date' using errcode = '22023'; end if;
   update public.unit_reservations r set released_at = now()
     where r.unit_id = v_unit.id and r.status = 'held' and r.released_at is null
       and exists (select 1 from public.bookings b where b.id = r.booking_id and b.status = 'pending' and b.hold_expires_at <= now());
-  update public.bookings set status = 'expired', updated_at = now()
-    where unit_id = v_unit.id and status = 'pending' and hold_expires_at <= now();
+  with expired as (
+    update public.bookings set status = 'expired', updated_at = now()
+    where unit_id = v_unit.id and status = 'pending' and hold_expires_at <= now()
+    returning id
+  )
+  insert into public.booking_status_history(booking_id, previous_status, new_status, reason)
+    select id, 'pending', 'expired', 'Temporary hold expired' from expired;
   return query select v_unit.id,
     not exists (select 1 from public.unit_blocks b where b.unit_id = v_unit.id and b.stay && daterange(p_check_in, p_checkout, '[)'))
     and not exists (select 1 from public.unit_reservations r where r.unit_id = v_unit.id and r.released_at is null and r.stay && daterange(p_check_in, p_checkout, '[)'));
