@@ -61,6 +61,15 @@ describe('Listings manager role controls', () => {
     expect(screen.getByLabelText('Property name')).toHaveValue('Harbor House')
   })
 
+  it('lets a super-admin start the first property when the project is empty', async () => {
+    const user = userEvent.setup()
+    mocks.getStaffProperties.mockResolvedValue({ data: [], error: null })
+    render(<ListingsManager isSuperAdmin canManageListings />)
+    await user.click(await screen.findByRole('button', { name: 'Create property' }))
+    expect(screen.getByRole('heading', { name: 'Create a property' })).toBeInTheDocument()
+    expect(screen.getByLabelText('URL slug')).toHaveValue('')
+  })
+
   it('lets a property manager manage units but not create properties', async () => {
     render(<ListingsManager isSuperAdmin={false} canManageListings />)
     expect(await screen.findByRole('button', { name: 'Add unit' })).toBeInTheDocument()
