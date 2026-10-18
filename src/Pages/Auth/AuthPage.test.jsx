@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import AuthPage from './AuthPage'
 
@@ -16,6 +16,8 @@ vi.mock('../../Lib/supabase', () => ({
     from: mocks.from,
   },
 }))
+
+afterEach(cleanup)
 
 function renderAuth(returnTo) {
   const initialEntry = returnTo ? { pathname: '/auth', state: { returnTo } } : '/auth'
