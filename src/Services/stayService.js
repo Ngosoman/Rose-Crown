@@ -153,6 +153,34 @@ export async function getStaffProperties() {
   return { data: data ?? [], error }
 }
 
+export async function getStaffBlocks() {
+  if (!supabase) return { data: [], error: new Error('Connect Supabase to manage date blocks.') }
+  const { data, error } = await supabase
+    .from('unit_blocks')
+    .select('id,unit_id,stay,block_type,reason,unit:units(id,name,property_id,property:properties(id,name,timezone))')
+    .order('created_at', { ascending: false })
+  return { data: data ?? [], error }
+}
+
+export async function createUnitBlock(values) {
+  if (!supabase) throw new Error('Connect Supabase to manage date blocks.')
+  const { data, error } = await supabase.rpc('create_unit_block', {
+    p_unit_id: values.unitId,
+    p_start: values.start,
+    p_end: values.end,
+    p_block_type: values.type,
+    p_reason: values.reason || '',
+  })
+  if (error) throw error
+  return data
+}
+
+export async function deleteUnitBlock(blockId) {
+  if (!supabase) throw new Error('Connect Supabase to manage date blocks.')
+  const { error } = await supabase.rpc('delete_unit_block', { p_block_id: blockId })
+  if (error) throw error
+}
+
 export async function getStaffBookings(propertyId) {
   if (!supabase) return { data: [], error: new Error('Connect Supabase to view bookings.') }
   let query = supabase

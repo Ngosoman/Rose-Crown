@@ -22,7 +22,12 @@ function bookingCoversDate(booking, key) {
   return localPropertyDate(booking.check_in, timezone) <= key && key < localPropertyDate(booking.checkout, timezone)
 }
 
-export default function BookingCalendar({ bookings }) {
+function blockCoversDate(block, key) {
+  const [start, end] = String(block.stay).slice(1, -1).split(',')
+  return start <= key && key < end
+}
+
+export default function BookingCalendar({ bookings, blocks = [], onDeleteBlock }) {
   const [view, setView] = useState('month')
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [propertyId, setPropertyId] = useState('all')
@@ -33,16 +38,24 @@ export default function BookingCalendar({ bookings }) {
       const property = booking.unit?.property
       if (property?.id) entries.set(property.id, property.name)
     })
+    blocks.forEach((block) => {
+      const property = block.unit?.property
+      if (property?.id) entries.set(property.id, property.name)
+    })
     return [...entries].map(([id, name]) => ({ id, name }))
-  }, [bookings])
+  }, [bookings, blocks])
   const units = useMemo(() => {
     const entries = new Map()
     bookings.forEach((booking) => {
       if (booking.unit?.id && (propertyId === 'all' || booking.unit.property_id === propertyId)) entries.set(booking.unit.id, booking.unit.name)
     })
+    blocks.forEach((block) => {
+      if (block.unit?.id && (propertyId === 'all' || block.unit.property_id === propertyId)) entries.set(block.unit.id, block.unit.name)
+    })
     return [...entries].map(([id, name]) => ({ id, name }))
-  }, [bookings, propertyId])
+  }, [bookings, blocks, propertyId])
   const filtered = bookings.filter((booking) => (propertyId === 'all' || booking.unit?.property_id === propertyId) && (unitId === 'all' || booking.unit?.id === unitId))
+  const filteredBlocks = blocks.filter((block) => (propertyId === 'all' || block.unit?.property_id === propertyId) && (unitId === 'all' || block.unit?.id === unitId))
   const monthStart = startOfMonth(selectedDate)
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
   const monthEnd = endOfWeek(endOfMonth(selectedDate), { weekStartsOn: 1 })
@@ -53,7 +66,11 @@ export default function BookingCalendar({ bookings }) {
     : view === 'week'
       ? Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(selectedDate, { weekStartsOn: 1 }), index))
       : monthDates.filter((date) => isSameMonth(date, selectedDate))
-  const events = activeDates.map((date) => ({ date, bookings: filtered.filter((booking) => bookingCoversDate(booking, dateKey(date))) }))
+  const events = activeDates.map((date) => ({
+    date,
+    bookings: filtered.filter((booking) => bookingCoversDate(booking, dateKey(date))),
+    blocks: filteredBlocks.filter((block) => blockCoversDate(block, dateKey(date))),
+  }))
 
   function move(amount) {
     setSelectedDate((current) => view === 'day' ? addDays(current, amount) : view === 'week' ? addWeeks(current, amount) : addMonths(current, amount))
@@ -71,10 +88,11 @@ export default function BookingCalendar({ bookings }) {
     {view === 'month' && <div className="month-calendar" role="grid" aria-label={format(selectedDate, 'MMMM yyyy')}><div className="calendar-weekdays" role="row">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <span role="columnheader" key={day}>{day}</span>)}</div><div className="calendar-days">{monthDates.map((date) => {
       const key = dateKey(date)
       const dayBookings = filtered.filter((booking) => bookingCoversDate(booking, key))
+      const dayBlocks = filteredBlocks.filter((block) => blockCoversDate(block, key))
       const isOutside = !isSameMonth(date, selectedDate)
-      return <button className={`calendar-day ${isOutside ? 'is-outside' : ''} ${dateKey(selectedDate) === key ? 'is-selected' : ''}`} role="gridcell" aria-label={`${format(date, 'EEEE, MMMM d')}, ${dayBookings.length} active stays`} key={key} onClick={() => { setSelectedDate(date); setView('day') }}><span className="calendar-day-number">{format(date, 'd')}</span>{dayBookings.length > 0 && <span className="calendar-day-count">{dayBookings.length} {dayBookings.length === 1 ? 'stay' : 'stays'}</span>}{dayBookings.slice(0, 2).map((booking) => <span className={`calendar-marker status-${booking.status}`} key={booking.id}>{booking.unit?.name}: {humanizeStatus(booking.status)}</span>)}</button>
+      return <button className={`calendar-day ${isOutside ? 'is-outside' : ''} ${dateKey(selectedDate) === key ? 'is-selected' : ''}`} role="gridcell" aria-label={`${format(date, 'EEEE, MMMM d')}, ${dayBookings.length} active stays, ${dayBlocks.length} blocks`} key={key} onClick={() => { setSelectedDate(date); setView('day') }}><span className="calendar-day-number">{format(date, 'd')}</span>{dayBookings.length + dayBlocks.length > 0 && <span className="calendar-day-count">{dayBookings.length} stays · {dayBlocks.length} blocks</span>}{dayBookings.slice(0, 2).map((booking) => <span className={`calendar-marker status-${booking.status}`} key={booking.id}>{booking.unit?.name}: {humanizeStatus(booking.status)}</span>)}{dayBlocks.slice(0, 2).map((block) => <span className="calendar-marker calendar-block-marker" key={block.id}>{block.unit?.name}: {humanizeStatus(block.block_type)}</span>)}</button>
     })}</div></div>}
-    {view !== 'month' && <div className="calendar-agenda">{events.map(({ date, bookings: dateBookings }) => <div className="agenda-day" key={dateKey(date)}><div className="agenda-date"><span>{format(date, 'EEE')}</span><strong>{format(date, 'MMM d')}</strong></div><div className="agenda-events">{dateBookings.length === 0 ? <span className="agenda-empty">No active stays</span> : dateBookings.map((booking) => <article className="agenda-event" key={booking.id}><span className={`status-pill status-${booking.status}`}>{humanizeStatus(booking.status)}</span><strong>{booking.guest_name}</strong><span>{booking.unit?.property?.name} · {booking.unit?.name}</span><span>{formatStayDate(booking.check_in, { hour: 'numeric', minute: '2-digit' })} check-in · {formatStayDate(booking.checkout, { hour: 'numeric', minute: '2-digit' })} checkout</span><span>Ref. {booking.reference}</span></article>)}</div></div>)}</div>}
+    {view !== 'month' && <div className="calendar-agenda">{events.map(({ date, bookings: dateBookings, blocks: dateBlocks }) => <div className="agenda-day" key={dateKey(date)}><div className="agenda-date"><span>{format(date, 'EEE')}</span><strong>{format(date, 'MMM d')}</strong></div><div className="agenda-events">{dateBookings.length + dateBlocks.length === 0 ? <span className="agenda-empty">No active stays or blocks</span> : <>{dateBookings.map((booking) => <article className="agenda-event" key={booking.id}><span className={`status-pill status-${booking.status}`}>{humanizeStatus(booking.status)}</span><strong>{booking.guest_name}</strong><span>{booking.unit?.property?.name} · {booking.unit?.name}</span><span>{formatStayDate(booking.check_in, { hour: 'numeric', minute: '2-digit' })} check-in · {formatStayDate(booking.checkout, { hour: 'numeric', minute: '2-digit' })} checkout</span><span>Ref. {booking.reference}</span></article>)}{dateBlocks.map((block) => <article className="agenda-event agenda-block" key={block.id}><span className="block-type-pill">{humanizeStatus(block.block_type)}</span><strong>{block.unit?.name} · Unavailable</strong><span>{block.reason || 'No reason provided'}</span><span>Through {String(block.stay).slice(1, -1).split(',')[1]}</span>{onDeleteBlock && <button className="plain-button" onClick={() => onDeleteBlock(block)}>Remove block</button>}</article>)}</>}</div></div>)}</div>}
     <div className="calendar-legend"><span><i className="legend-dot legend-pending" /> Pending request</span><span><i className="legend-dot legend-approved" /> Approved stay</span><span><i className="legend-dot legend-due" /> Checkout due</span><span><CalendarDays size={14} /> Dates shown in property-local time</span></div>
   </section>
 }
