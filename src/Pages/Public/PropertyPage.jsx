@@ -23,6 +23,12 @@ export default function PropertyPage() {
     return () => { current = false }
   }, [slug])
   const selectedUnit = searchParams.get('unit')
+  const bookingQuery = new URLSearchParams()
+  for (const key of ['checkIn', 'checkout', 'guests']) {
+    const value = searchParams.get(key)
+    if (value) bookingQuery.set(key, value)
+  }
+  const bookingSuffix = bookingQuery.toString()
 
   if (loading) return <section className="section-wrap property-page"><LoadingState label="Loading this property" /></section>
   if (!configured) return <section className="section-wrap property-page"><ConfigState /></section>
@@ -38,7 +44,7 @@ export default function PropertyPage() {
     })}{property.units.length === 0 && <div className="gallery-empty">No units are currently published.</div>}</div>
     <div className="property-detail-layout"><div className="property-about"><span className="eyebrow">The property</span><h2>A slower pace, <em>by design.</em></h2><p>{property.description || 'A thoughtfully prepared place for your next stay.'}</p><div className="house-rules"><div><span>Check in</span><strong>{property.check_in_time?.slice(0, 5) ?? '15:00'}</strong></div><div><span>Check out</span><strong>{property.checkout_time?.slice(0, 5) ?? '11:00'}</strong></div><div><span>Local time</span><strong>{property.timezone}</strong></div></div></div>
       <div className="unit-list"><div className="unit-list-heading"><div><span className="eyebrow">Choose your space</span><h2>Available stays</h2></div><span>{property.units.length} {property.units.length === 1 ? 'option' : 'options'}</span></div>
-        {property.units.map((unit) => <article className={`unit-option ${selectedUnit === unit.id ? 'unit-highlight' : ''}`} key={unit.id}><div className="unit-option-main"><div><span className="eyebrow">{unit.unit_type}</span><h3>{unit.name}</h3></div><strong>{formatMoney(unit.base_nightly_price, unit.currency)}<small> / night</small></strong></div><div className="unit-facts"><span><Users size={15} /> Up to {unit.capacity}</span><span><BedDouble size={15} /> {unit.bedrooms} bedrooms</span><span><Bath size={15} /> {unit.bathrooms} baths</span></div><p>{unit.description || 'A private, considered space for your stay.'}</p><div className="amenity-list">{(unit.unit_amenities ?? []).map(({ amenities }) => amenities?.name).filter(Boolean).map((name) => <span key={name}>{name}</span>)}</div><Link className="button button-dark unit-book" to={`/book/${unit.id}`}>Choose dates <ArrowRight size={16} /></Link></article>)}
+        {property.units.map((unit) => <article className={`unit-option ${selectedUnit === unit.id ? 'unit-highlight' : ''}`} key={unit.id}><div className="unit-option-main"><div><span className="eyebrow">{unit.unit_type}</span><h3>{unit.name}</h3></div><strong>{formatMoney(unit.base_nightly_price, unit.currency)}<small> / night</small></strong></div><div className="unit-facts"><span><Users size={15} /> Up to {unit.capacity}</span><span><BedDouble size={15} /> {unit.bedrooms} bedrooms</span><span><Bath size={15} /> {unit.bathrooms} baths</span></div><p>{unit.description || 'A private, considered space for your stay.'}</p><div className="amenity-list">{(unit.unit_amenities ?? []).map(({ amenities }) => amenities?.name).filter(Boolean).map((name) => <span key={name}>{name}</span>)}</div><Link className="button button-dark unit-book" to={`/book/${unit.id}${bookingSuffix ? `?${bookingSuffix}` : ''}`}>Choose dates <ArrowRight size={16} /></Link></article>)}
         {property.units.length === 0 && <EmptyState title="No stays available yet" body="Please check back soon for published spaces at this property." />}
       </div>
     </div>
