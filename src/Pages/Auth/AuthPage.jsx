@@ -14,7 +14,7 @@ export default function AuthPage() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/my-stays'
+  const requestedReturnTo = location.state?.returnTo
 
   async function submit(event) {
     event.preventDefault()
@@ -34,9 +34,27 @@ export default function AuthPage() {
         toast.success('If an account exists, a reset link is on its way.')
         setMode('sign-in')
       } else {
-        const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+        const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
         if (authError) throw authError
-        navigate(returnTo, { replace: true })
+        const userId = data.user?.id ?? data.session?.user?.id
+        if (!userId) throw new Error('Could not verify the signed-in account.')
+
+        const [roleResult, membershipResult] = await Promise.all([
+          supabase.from('user_roles').select('role').eq('user_id', userId),
+          supabase.from('property_members').select('role').eq('user_id', userId),
+        ])
+        if (roleResult.error || membershipResult.error) {
+          throw roleResult.error || membershipResult.error
+        }
+
+        const roles = [...(roleResult.data ?? []), ...(membershipResult.data ?? [])]
+        const isStaff = roles.some(({ role }) => ['super_admin', 'property_manager', 'receptionist'].includes(role))
+        const safeReturnTo = typeof requestedReturnTo === 'string'
+          && requestedReturnTo.startsWith('/')
+          && !requestedReturnTo.startsWith('//')
+          ? requestedReturnTo
+          : '/my-stays'
+        navigate(isStaff ? '/manage' : safeReturnTo === '/manage' ? '/my-stays' : safeReturnTo, { replace: true })
       }
     } catch (reason) {
       setError(reason.message || 'Authentication failed.')
