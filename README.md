@@ -20,7 +20,7 @@ npm run dev
 
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env` to the project URL and publishable/anon key, then restart Vite. Only the public key belongs in the frontend. Never add a service-role key to a `VITE_` variable.
 
-The interface runs without these values and displays setup guidance. It intentionally does not invent listings or bookings.
+If either value is missing, the interface displays setup guidance rather than inventing listings or bookings. This workspace is currently connected to the Rose-Crown Supabase URL using its public anon key; `.env` is ignored by Git.
 
 ## Scripts
 
@@ -33,7 +33,7 @@ The interface runs without these values and displays setup guidance. It intentio
 
 ## Supabase Setup
 
-Migrations are ordered in `supabase/migrations/`. No Supabase project was configured or reachable during this implementation, so none have been applied or remotely verified.
+Migrations are ordered in `supabase/migrations/`. The four migrations have been applied atomically to the shared Rose-Crown project on the `main` branch using the authenticated SQL Editor. Catalog checks verified 18 public tables with RLS, 26 policies, 15 RPCs, two exclusion constraints, and the listing bucket. The project’s dev/production designation is unknown; see [Deployment](docs/DEPLOYMENT.md).
 
 With an authorized project and the Supabase CLI installed:
 
@@ -43,7 +43,7 @@ npx supabase migration up --local
 npx supabase test db
 ```
 
-For a remote staging project, first inspect its migration history with `npx supabase migration list --linked`; link using the project's actual reference, review the diff, then apply with `npx supabase db push --linked`. Do not reset or overwrite a database containing data. See [Deployment](docs/DEPLOYMENT.md).
+For a separate staging project, inspect its migration history first, link using that project's actual reference, then apply the reviewed migrations without resetting or overwriting existing data. The shared main project already has the four versions recorded; because the CLI was unavailable, the dashboard shows version rows without migration names. Align CLI history before any future `db push`. See [Deployment](docs/DEPLOYMENT.md).
 
 Before the first property can be managed, an authorized operator must provision the first super admin directly through Supabase SQL Editor or a server-side administrative tool. See [Security](docs/SECURITY.md).
 
@@ -52,7 +52,7 @@ Before the first property can be managed, an authorized operator must provision 
 - React JSX, Vite, Tailwind CSS, React Router, React Hook Form, Zod, Lucide, Recharts, and a custom accessible calendar.
 - Supabase Auth and RLS for identity/access; PostgreSQL RPCs for availability-critical work; Storage for listing photos; Realtime for view refresh.
 - A 15-minute request hold and GiST exclusion constraint protect the same date-range availability rules for both website and staff-created bookings.
-- A scheduled Edge Function processes checkout reminders and notification delivery. Email uses Resend when configured. SMS/WhatsApp remain visibly failed until a provider is implemented and configured.
+- A scheduled Edge Function processes checkout reminders and notification delivery. Its database jobs are installed, but the Edge Function and Cron schedule are not deployed. Email uses Resend when configured. SMS/WhatsApp remain visibly failed until a provider is implemented and configured.
 
 See [Architecture](docs/ARCHITECTURE.md), [Database Schema](docs/DATABASE_SCHEMA.md), and [Booking Workflow](docs/BOOKING_WORKFLOW.md).
 
