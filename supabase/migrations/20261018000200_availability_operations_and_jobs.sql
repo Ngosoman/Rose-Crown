@@ -35,12 +35,12 @@ end $$;
 create or replace function public.record_checkin(p_booking_id uuid, p_notes text default '')
 returns public.bookings language plpgsql security definer set search_path = ''
 as $$
-declare v_booking public.bookings%rowtype; v_property_id uuid; v_previous_status public.booking_status;
+declare v_booking public.bookings%rowtype; v_property_id uuid; v_previous_status public.booking_status; v_unit_id uuid;
 begin
-  select u.property_id into v_property_id from public.units u join public.bookings b on b.unit_id = u.id where b.id = p_booking_id;
+  select b.unit_id, u.property_id into v_unit_id, v_property_id from public.units u join public.bookings b on b.unit_id = u.id where b.id = p_booking_id;
   if v_property_id is null or not public.can_manage_property(v_property_id) then raise exception 'Not authorized' using errcode = '42501'; end if;
+  perform 1 from public.units where id = v_unit_id for update;
   select * into v_booking from public.bookings where id = p_booking_id for update;
-  perform 1 from public.units where id = v_booking.unit_id for update;
   if v_booking.status <> 'approved' then raise exception 'Booking is not ready for check-in' using errcode = 'P0001'; end if;
   v_previous_status := v_booking.status;
   update public.bookings set status = 'checked_in', updated_at = now() where id = v_booking.id returning * into v_booking;
@@ -53,11 +53,13 @@ end $$;
 create or replace function public.cancel_booking(p_booking_id uuid, p_reason text default '')
 returns public.bookings language plpgsql security definer set search_path = ''
 as $$
-declare v_booking public.bookings%rowtype; v_unit public.units%rowtype; v_staff boolean; v_previous_status public.booking_status;
+declare v_booking public.bookings%rowtype; v_unit public.units%rowtype; v_staff boolean; v_previous_status public.booking_status; v_unit_id uuid;
 begin
+  select unit_id into v_unit_id from public.bookings where id = p_booking_id;
+  if v_unit_id is null then raise exception 'Booking not found' using errcode = 'P0002'; end if;
+  select * into v_unit from public.units where id = v_unit_id for update;
   select * into v_booking from public.bookings where id = p_booking_id for update;
   if not found then raise exception 'Booking not found' using errcode = 'P0002'; end if;
-  select * into v_unit from public.units where id = v_booking.unit_id for update;
   v_staff := public.can_manage_property(v_unit.property_id);
   if v_booking.guest_id is distinct from (select auth.uid()) and not v_staff then raise exception 'Not authorized' using errcode = '42501'; end if;
   if v_booking.status not in ('pending', 'approved') then raise exception 'An occupied or completed stay cannot be cancelled here' using errcode = 'P0001'; end if;
@@ -65,6 +67,8 @@ begin
   v_previous_status := v_booking.status;
   update public.bookings set status = 'cancelled', cancellation_reason = nullif(trim(p_reason), ''), updated_at = now() where id = v_booking.id returning * into v_booking;
   update public.unit_reservations set released_at = now() where booking_id = v_booking.id and released_at is null;
+  update public.booking_extensions set status = 'cancelled', decided_by = (select auth.uid()), decided_at = now()
+    where booking_id = v_booking.id and status = 'pending';
   insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id, reason)
     values (v_booking.id, v_previous_status, 'cancelled', (select auth.uid()), coalesce(p_reason, ''));
   insert into public.audit_logs(actor_id, property_id, action, entity_type, entity_id, details)

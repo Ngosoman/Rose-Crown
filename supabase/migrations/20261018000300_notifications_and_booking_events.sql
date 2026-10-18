@@ -46,6 +46,48 @@ end $$;
 create trigger booking_status_notifications after update of status on public.bookings
 for each row execute function public.notify_booking_status_changed();
 
+create or replace function public.notify_extension_event()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_booking public.bookings%rowtype;
+  v_property_id uuid;
+  v_unit_name text;
+  v_event text;
+  v_title text;
+  v_message text;
+  v_recipient record;
+begin
+  select b.* into v_booking from public.bookings b where b.id = new.booking_id;
+  select u.property_id, u.name into v_property_id, v_unit_name from public.units u where u.id = v_booking.unit_id;
+  if tg_op = 'INSERT' then
+    v_event := 'extension_requested';
+    v_title := 'Checkout extension requested';
+    v_message := v_booking.guest_name || ' · ' || v_booking.reference || ' · ' || v_unit_name || ' · requested until ' || new.requested_checkout::text;
+  elsif new.status is distinct from old.status then
+    v_event := 'extension_' || new.status::text;
+    v_title := case when new.status = 'approved' then 'Checkout extension approved' else 'Checkout extension ' || new.status::text end;
+    v_message := 'Request for booking ' || v_booking.reference || ' was ' || new.status::text || case when new.reason <> '' then ': ' || new.reason else '.' end;
+  else
+    return new;
+  end if;
+  for v_recipient in select pm.user_id from public.property_members pm where pm.property_id = v_property_id loop
+    insert into public.notifications(recipient_id, booking_id, property_id, notification_type, title, body, channel, deduplication_key)
+    values (v_recipient.user_id, v_booking.id, v_property_id, v_event, v_title, v_message, 'in_app', new.id::text || ':' || new.status::text || ':staff:' || v_recipient.user_id::text)
+    on conflict (deduplication_key) do nothing;
+  end loop;
+  if v_booking.guest_id is not null then
+    insert into public.notifications(recipient_id, booking_id, property_id, notification_type, title, body, channel, deduplication_key)
+    values (v_booking.guest_id, v_booking.id, v_property_id, v_event, v_title, v_message, 'in_app', new.id::text || ':' || new.status::text || ':guest')
+    on conflict (deduplication_key) do nothing;
+  end if;
+  return new;
+end $$;
+create trigger extension_requested_notifications after insert on public.booking_extensions
+for each row execute function public.notify_extension_event();
+create trigger extension_status_notifications after update of status on public.booking_extensions
+for each row execute function public.notify_extension_event();
+
 create or replace function public.claim_notifications(p_limit integer default 50)
 returns setof public.notifications language plpgsql security definer set search_path = ''
 as $$

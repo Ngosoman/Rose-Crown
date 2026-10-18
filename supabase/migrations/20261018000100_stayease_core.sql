@@ -159,6 +159,7 @@ create table public.booking_extensions (
   created_at timestamptz not null default now(),
   check (requested_checkout > original_checkout)
 );
+create unique index booking_extensions_one_pending_idx on public.booking_extensions(booking_id) where status = 'pending';
 create table public.checkin_checkout_logs (
   id uuid primary key default gen_random_uuid(),
   booking_id uuid not null references public.bookings(id) on delete cascade,
@@ -259,7 +260,7 @@ declare
   v_rate numeric(12,2);
   v_lines jsonb := '[]'::jsonb;
 begin
-  if p_check_in is null or p_checkout is null or p_checkout <= p_check_in or p_checkout <= current_date then
+  if p_check_in is null or p_checkout is null or p_checkout <= p_check_in then
     raise exception 'Choose a valid future stay' using errcode = '22023';
   end if;
   if length(trim(coalesce(p_guest_name, ''))) < 2 or position('@' in coalesce(p_guest_email, '')) < 2 then
@@ -271,6 +272,7 @@ begin
   if p_guest_count > v_unit.capacity then raise exception 'Guest count exceeds unit capacity' using errcode = '22023'; end if;
   select * into v_property from public.properties where id = v_unit.property_id and published;
   if not found then raise exception 'Property is unavailable' using errcode = 'P0001'; end if;
+  if p_check_in <= (now() at time zone v_property.timezone)::date then raise exception 'Check-in must be a future local date' using errcode = '22023'; end if;
   update public.unit_reservations r set released_at = now()
     where r.unit_id = v_unit.id and r.status = 'held' and r.released_at is null
       and exists (select 1 from public.bookings b where b.id = r.booking_id and b.hold_expires_at <= now() and b.status = 'pending');
@@ -309,11 +311,12 @@ as $$
 declare v_unit public.units%rowtype; v_property public.properties%rowtype; v_booking public.bookings%rowtype; v_total numeric(12,2) := 0; v_night date; v_rate numeric(12,2); v_lines jsonb := '[]'::jsonb;
 begin
   if p_source not in ('phone', 'whatsapp', 'walk_in', 'staff') then raise exception 'Unsupported manual source' using errcode = '22023'; end if;
-  if p_checkout <= p_check_in or length(trim(coalesce(p_guest_name, ''))) < 2 or position('@' in coalesce(p_guest_email, '')) < 2 then raise exception 'Valid guest details and dates are required' using errcode = '22023'; end if;
+  if p_check_in is null or p_checkout is null or p_checkout <= p_check_in or length(trim(coalesce(p_guest_name, ''))) < 2 or position('@' in coalesce(p_guest_email, '')) < 2 then raise exception 'Valid guest details and dates are required' using errcode = '22023'; end if;
   select * into v_unit from public.units where id = p_unit_id for update;
   if not found or not v_unit.active or not public.can_manage_property(v_unit.property_id) then raise exception 'Unit unavailable or unauthorized' using errcode = '42501'; end if;
   if p_guest_count is null or p_guest_count < 1 or p_guest_count > v_unit.capacity then raise exception 'Guest count exceeds unit capacity' using errcode = '22023'; end if;
   select * into v_property from public.properties where id = v_unit.property_id;
+  if p_check_in <= (now() at time zone v_property.timezone)::date then raise exception 'Check-in must be a future local date' using errcode = '22023'; end if;
   update public.unit_reservations r set released_at = now() where r.unit_id = v_unit.id and r.status = 'held' and r.released_at is null and exists (select 1 from public.bookings b where b.id = r.booking_id and b.hold_expires_at <= now() and b.status = 'pending');
   update public.bookings set status = 'expired', updated_at = now() where unit_id = v_unit.id and status = 'pending' and hold_expires_at <= now();
   if exists (select 1 from public.unit_blocks b where b.unit_id = v_unit.id and b.stay && daterange(p_check_in, p_checkout, '[)')) or exists (select 1 from public.unit_reservations r where r.unit_id = v_unit.id and r.released_at is null and r.stay && daterange(p_check_in, p_checkout, '[)')) then raise exception 'Those dates are unavailable' using errcode = 'P0001'; end if;
@@ -332,12 +335,13 @@ end $$;
 create or replace function public.decide_booking(p_booking_id uuid, p_approve boolean, p_reason text default '')
 returns public.bookings language plpgsql security definer set search_path = ''
 as $$
-declare v_booking public.bookings%rowtype; v_property_id uuid; v_previous_status public.booking_status;
+declare v_booking public.bookings%rowtype; v_property_id uuid; v_unit_id uuid;
 begin
-  select u.property_id into v_property_id from public.units u join public.bookings b on b.unit_id = u.id where b.id = p_booking_id;
+  select b.unit_id, u.property_id into v_unit_id, v_property_id
+    from public.bookings b join public.units u on u.id = b.unit_id where b.id = p_booking_id;
   if v_property_id is null or not public.can_manage_property(v_property_id) then raise exception 'Not authorized' using errcode = '42501'; end if;
+  perform 1 from public.units where id = v_unit_id for update;
   select * into v_booking from public.bookings where id = p_booking_id for update;
-  perform 1 from public.units where id = v_booking.unit_id for update;
   if v_booking.status <> 'pending' then raise exception 'Booking is no longer pending' using errcode = 'P0001'; end if;
   if p_approve and v_booking.hold_expires_at <= now() then
     update public.unit_reservations set released_at = now() where booking_id = v_booking.id and released_at is null;
@@ -349,19 +353,20 @@ begin
     update public.bookings set status = 'rejected', cancellation_reason = nullif(trim(p_reason), ''), updated_at = now() where id = v_booking.id returning * into v_booking;
     update public.unit_reservations set released_at = now() where booking_id = v_booking.id and released_at is null;
   end if;
-  insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id, reason) values (v_booking.id, 'pending', v_booking.status, (select auth.uid()), coalesce(p_reason, ''));
+  insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id, reason)
+    values (v_booking.id, 'pending', v_booking.status, (select auth.uid()), coalesce(p_reason, ''));
   return v_booking;
 end $$;
 
 create or replace function public.record_checkout(p_booking_id uuid, p_notes text default '')
 returns public.bookings language plpgsql security definer set search_path = ''
 as $$
-declare v_booking public.bookings%rowtype; v_property_id uuid;
+declare v_booking public.bookings%rowtype; v_property_id uuid; v_previous_status public.booking_status;
 begin
   select u.property_id into v_property_id from public.units u join public.bookings b on b.unit_id = u.id where b.id = p_booking_id;
   if v_property_id is null or not public.can_manage_property(v_property_id) then raise exception 'Not authorized' using errcode = '42501'; end if;
+  perform 1 from public.units where id = (select unit_id from public.bookings where id = p_booking_id) for update;
   select * into v_booking from public.bookings where id = p_booking_id for update;
-  perform 1 from public.units where id = v_booking.unit_id for update;
   if v_booking.status not in ('checked_in', 'checkout_due') then raise exception 'Booking is not checked in' using errcode = 'P0001'; end if;
   v_previous_status := v_booking.status;
   update public.bookings set status = 'checked_out', updated_at = now() where id = v_booking.id returning * into v_booking;
@@ -375,13 +380,18 @@ end $$;
 create or replace function public.request_extension(p_booking_id uuid, p_requested_checkout date, p_reason text default '')
 returns public.booking_extensions language plpgsql security definer set search_path = ''
 as $$
-declare v_booking public.bookings%rowtype; v_property public.properties%rowtype; v_extension public.booking_extensions%rowtype;
+declare v_booking public.bookings%rowtype; v_property public.properties%rowtype; v_extension public.booking_extensions%rowtype; v_unit_id uuid;
 begin
+  select unit_id into v_unit_id from public.bookings where id = p_booking_id;
+  if v_unit_id is null then raise exception 'Booking not found' using errcode = 'P0002'; end if;
+  perform 1 from public.units where id = v_unit_id for update;
   select * into v_booking from public.bookings where id = p_booking_id for update;
   if not found then raise exception 'Booking not found' using errcode = 'P0002'; end if;
   if v_booking.guest_id <> (select auth.uid()) and not exists (select 1 from public.units u where u.id = v_booking.unit_id and public.can_manage_property(u.property_id)) then raise exception 'Not authorized' using errcode = '42501'; end if;
   if v_booking.status not in ('approved', 'checked_in', 'checkout_due') then raise exception 'Booking cannot be extended' using errcode = 'P0001'; end if;
+  if exists (select 1 from public.booking_extensions where booking_id = v_booking.id and status = 'pending') then raise exception 'An extension request is already pending' using errcode = 'P0001'; end if;
   select p.* into v_property from public.properties p join public.units u on u.property_id = p.id where u.id = v_booking.unit_id;
+  if p_requested_checkout is null or p_requested_checkout <= (v_booking.checkout at time zone v_property.timezone)::date then raise exception 'New checkout must be after the current checkout' using errcode = '22023'; end if;
   insert into public.booking_extensions(booking_id, requested_by, original_checkout, requested_checkout, reason) values (v_booking.id, (select auth.uid()), v_booking.checkout, (p_requested_checkout + v_property.checkout_time) at time zone v_property.timezone, coalesce(p_reason, '')) returning * into v_extension;
   return v_extension;
 end $$;
@@ -389,21 +399,34 @@ end $$;
 create or replace function public.decide_extension(p_extension_id uuid, p_approve boolean, p_reason text default '')
 returns public.booking_extensions language plpgsql security definer set search_path = ''
 as $$
-declare v_extension public.booking_extensions%rowtype; v_booking public.bookings%rowtype; v_unit public.units%rowtype; v_property public.properties%rowtype; v_new_checkout date; v_old_checkout date;
+declare v_extension public.booking_extensions%rowtype; v_booking public.bookings%rowtype; v_unit public.units%rowtype; v_property public.properties%rowtype; v_new_checkout date; v_old_checkout date; v_unit_id uuid; v_total numeric(12,2) := 0; v_night date; v_rate numeric(12,2); v_lines jsonb := '[]'::jsonb; v_reservations_updated integer;
 begin
+  select b.unit_id into v_unit_id from public.booking_extensions e join public.bookings b on b.id = e.booking_id where e.id = p_extension_id;
+  if v_unit_id is null then raise exception 'Extension not found' using errcode = 'P0002'; end if;
+  select * into v_unit from public.units where id = v_unit_id for update;
+  select * into v_booking from public.bookings where id = (select booking_id from public.booking_extensions where id = p_extension_id) for update;
   select * into v_extension from public.booking_extensions where id = p_extension_id for update;
-  if not found then raise exception 'Extension not found' using errcode = 'P0002'; end if;
-  select * into v_booking from public.bookings where id = v_extension.booking_id for update;
-  select * into v_unit from public.units where id = v_booking.unit_id for update;
   if not public.can_manage_property(v_unit.property_id) then raise exception 'Not authorized' using errcode = '42501'; end if;
   if v_extension.status <> 'pending' or v_booking.checkout <> v_extension.original_checkout then raise exception 'Extension is no longer current' using errcode = 'P0001'; end if;
   if p_approve then
+    if v_booking.status not in ('approved', 'checked_in', 'checkout_due') then raise exception 'Booking is not eligible for an extension' using errcode = 'P0001'; end if;
     select * into v_property from public.properties where id = v_unit.property_id;
     v_old_checkout := (v_booking.checkout at time zone v_property.timezone)::date;
     v_new_checkout := (v_extension.requested_checkout at time zone v_property.timezone)::date;
+    if v_new_checkout <= v_old_checkout then raise exception 'New checkout must be after the current checkout' using errcode = '22023'; end if;
     if exists (select 1 from public.unit_blocks b where b.unit_id = v_unit.id and b.stay && daterange(v_old_checkout, v_new_checkout, '[)')) then raise exception 'New dates conflict with a block' using errcode = 'P0001'; end if;
+    for v_night in select generate_series(lower(v_booking.stay), v_new_checkout - 1, interval '1 day')::date loop
+      select coalesce((select rr.nightly_price from public.unit_rate_rules rr where rr.unit_id = v_unit.id and rr.date_from <= v_night and rr.date_to > v_night order by rr.priority desc, rr.date_from desc, rr.id limit 1), v_unit.base_nightly_price) into v_rate;
+      v_total := v_total + v_rate;
+      v_lines := v_lines || jsonb_build_array(jsonb_build_object('date', v_night, 'nightly_rate', v_rate));
+    end loop;
     update public.unit_reservations set stay = daterange(lower(stay), v_new_checkout, '[)') where booking_id = v_booking.id and released_at is null;
-    update public.bookings set checkout = v_extension.requested_checkout, stay = daterange(lower(stay), v_new_checkout, '[)'), status = case when status = 'checkout_due' then 'checked_in'::public.booking_status else status end, updated_at = now() where id = v_booking.id;
+    get diagnostics v_reservations_updated = row_count;
+    if v_reservations_updated <> 1 then raise exception 'Active reservation not found' using errcode = 'P0001'; end if;
+    update public.bookings set checkout = v_extension.requested_checkout, stay = daterange(lower(stay), v_new_checkout, '[)'), agreed_total = round(v_total, 2), price_breakdown = jsonb_build_object('nights', v_lines, 'subtotal', round(v_total, 2)), status = case when status = 'checkout_due' then 'checked_in'::public.booking_status else status end, updated_at = now() where id = v_booking.id;
+    if v_booking.status = 'checkout_due' then
+      insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id, reason) values (v_booking.id, 'checkout_due', 'checked_in', (select auth.uid()), 'Extension approved');
+    end if;
     update public.booking_extensions set status = 'approved', decided_by = (select auth.uid()), decided_at = now() where id = v_extension.id returning * into v_extension;
   else
     update public.booking_extensions set status = 'rejected', decided_by = (select auth.uid()), decided_at = now(), reason = concat_ws(' ', reason, nullif(trim(p_reason), '')) where id = v_extension.id returning * into v_extension;
