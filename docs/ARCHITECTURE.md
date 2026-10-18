@@ -20,6 +20,6 @@ Interactive availability operations lock the unit before booking rows. Reservati
 
 ## Current Scope
 
-The application includes public listing/search/detail, guest auth/booking/history/notifications/extension requests, a staff queue/manual booking/check-in/checkout/extension desk, and a property/unit-filtered day/week/month calendar. Property/unit editing, photo upload UI, broad analytics/reporting, payment gateway integration, and outbound SMS/WhatsApp are not implemented.
+The application includes public listing/search/detail, guest auth/booking/history/notifications/extension requests, a staff queue/manual booking/check-in/checkout/extension desk, a property/unit-filtered day/week/month calendar, and a Listings manager for property/unit editing, amenities, seasonal rates, and listing photos. Broad analytics/reporting, payment gateway integration, and outbound SMS/WhatsApp providers are not implemented.
 
-The five ordered migrations have been applied to the shared Rose-Crown Supabase project on `main`. Catalog checks verified tables, RLS policies, RPCs, overlap constraints, storage bucket, migration versions, and the active five-minute database Cron. The project’s development/production designation remains unconfirmed; outbound notification delivery is not scheduled.
+The six ordered migrations have been applied to the shared Rose-Crown Supabase Production project on `main`. Catalog checks verified tables, RLS policies, RPCs, overlap constraints, listing bucket, manager-only listing writes, migration versions, and active five-minute database Cron. The deployed Edge Function is not scheduled for outbound notification delivery.

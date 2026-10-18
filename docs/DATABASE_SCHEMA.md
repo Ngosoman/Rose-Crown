@@ -30,7 +30,9 @@ All application tables are in `public`; RLS is enabled on every public table in 
 
 ## RPCs
 
-`create_booking_request`, `create_manual_booking`, `get_unit_availability`, `decide_booking`, `cancel_booking`, `create_unit_block`, `delete_unit_block`, `record_checkin`, `record_checkout`, `request_extension`, `decide_extension`, `run_scheduled_jobs`, `enqueue_daily_checkout_briefings`, `claim_notifications`, and `mark_notification_read` are defined in migrations. Security-definer functions set an empty `search_path`, schema-qualify tables/functions, validate identity/property access, and restrict execution grants.
+`create_booking_request`, `create_manual_booking`, `get_unit_availability`, `decide_booking`, `cancel_booking`, `create_unit_block`, `delete_unit_block`, `record_checkin`, `record_checkout`, `request_extension`, `decide_extension`, `run_scheduled_jobs`, `enqueue_daily_checkout_briefings`, `claim_notifications`, `mark_notification_read`, `can_manage_listings`, `replace_unit_amenities`, `audit_listing_mutation`, and `run_rose_crown_cron_jobs` are defined in migrations. Security-definer functions set an empty `search_path`, schema-qualify tables/functions, validate identity/property access, and restrict execution grants.
+
+Migration 6 limits unit/rate/photo administration to super-admins and assigned property managers (not receptionists), makes amenity replacement an atomic RPC, and adds audit triggers for property/unit/rate/photo/amenity changes. `run_rose_crown_cron_jobs` can only be called by the database scheduler owner or service role.
 
 ## Important Invariants
 

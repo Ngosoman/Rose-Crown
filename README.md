@@ -33,7 +33,7 @@ If either value is missing, the interface displays setup guidance rather than in
 
 ## Supabase Setup
 
-Migrations are ordered in `supabase/migrations/`. The four migrations have been applied atomically to the shared Rose-Crown project on the `main` branch using the authenticated SQL Editor. Catalog checks verified 18 public tables with RLS, 26 policies, 15 RPCs, two exclusion constraints, and the listing bucket. The project’s dev/production designation is unknown; see [Deployment](docs/DEPLOYMENT.md).
+Migrations are ordered in `supabase/migrations/`. Six migrations have been applied atomically to the shared Rose-Crown Production project on the `main` branch using the authenticated SQL Editor. Catalog checks verified 19 public tables with RLS, 27 policies, 18 application RPC/helper functions, two exclusion constraints, listing Storage, and the active database Cron. See [Deployment](docs/DEPLOYMENT.md).
 
 With an authorized project and the Supabase CLI installed:
 
@@ -43,7 +43,7 @@ npx supabase migration up --local
 npx supabase test db
 ```
 
-For a separate staging project, inspect its migration history first, link using that project's actual reference, then apply the reviewed migrations without resetting or overwriting existing data. The shared main project already has the four versions recorded; because the CLI was unavailable, the dashboard shows version rows without migration names. Align CLI history before any future `db push`. See [Deployment](docs/DEPLOYMENT.md).
+For a separate staging project, inspect its migration history first, link using that project's actual reference, then apply the reviewed migrations without resetting or overwriting existing data. The shared Production project has six version rows; because they were applied through the SQL Editor, the dashboard rows do not contain migration names. Align CLI history before future `db push`. See [Deployment](docs/DEPLOYMENT.md).
 
 Before the first property can be managed, an authorized operator must provision the first super admin directly through Supabase SQL Editor or a server-side administrative tool. See [Security](docs/SECURITY.md).
 

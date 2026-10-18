@@ -10,7 +10,7 @@ npm run lint
 npm run build
 ```
 
-The Vitest/Testing Library suite covers booking form validation, formatting, loading/error/empty/configuration states, and that the guest dashboard does not fabricate records without a backend. The current frontend suite passed 11 tests during implementation.
+The Vitest/Testing Library suite covers booking form validation, formatting, loading/error/empty/configuration states, guest no-backend behavior, role-aware login/signup redirects, and Listings manager permissions/first-property entry. The current frontend suite has 20 tests.
 
 ## Database
 
