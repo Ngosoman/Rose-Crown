@@ -11,7 +11,7 @@ export async function getProperties() {
   if (!supabase) return { data: [], error: null, configured: false }
   const { data, error } = await supabase
     .from('properties')
-    .select('id,name,slug,description,address,city,timezone,currency,check_in_time,checkout_time,published,units(id,name,unit_type,capacity,bedrooms,bathrooms,description,base_nightly_price,currency,active,unit_photos(id,storage_path,alt_text,sort_order),unit_rate_rules(id,date_from,date_to,nightly_price,currency,priority),unit_amenities(amenity_id,amenities(id,name)))')
+    .select('id,name,slug,description,address,city,timezone,currency,check_in_time,checkout_time,published,units(id,property_id,name,unit_type,capacity,bedrooms,bathrooms,description,base_nightly_price,currency,active,unit_photos(id,storage_path,alt_text,sort_order),unit_rate_rules(id,date_from,date_to,nightly_price,currency,priority),unit_amenities(amenity_id,amenities(id,name)))')
     .eq('published', true)
     .order('name')
   return { data: (data ?? []).map((property) => ({
@@ -188,10 +188,10 @@ export async function saveUnit(values, unitId) {
 
 export async function replaceUnitAmenities(unitId, amenityIds) {
   if (!supabase) throw new Error('Connect Supabase to manage unit amenities.')
-  const { error: deleteError } = await supabase.from('unit_amenities').delete().eq('unit_id', unitId)
-  if (deleteError) throw deleteError
-  if (amenityIds.length === 0) return
-  const { error } = await supabase.from('unit_amenities').insert(amenityIds.map((amenityId) => ({ unit_id: unitId, amenity_id: amenityId })))
+  const { error } = await supabase.rpc('replace_unit_amenities', {
+    p_unit_id: unitId,
+    p_amenity_ids: amenityIds,
+  })
   if (error) throw error
 }
 

@@ -18,7 +18,7 @@ import PropertyForm from './PropertyForm'
 import RateRuleForm from './RateRuleForm'
 import UnitForm from './UnitForm'
 
-export default function ListingsManager({ isSuperAdmin }) {
+export default function ListingsManager({ isSuperAdmin, canManageListings }) {
   const [properties, setProperties] = useState([])
   const [amenities, setAmenities] = useState([])
   const [selectedPropertyId, setSelectedPropertyId] = useState('')
@@ -133,20 +133,19 @@ export default function ListingsManager({ isSuperAdmin }) {
     {propertyEditorOpen && isSuperAdmin && <PropertyForm property={editingProperty} onSave={savePropertyDetails} onCancel={() => { setPropertyEditorOpen(false); setEditingProperty(null) }} busy={busy} />}
     {!propertyEditorOpen && properties.length > 0 && <div className="listing-property-select"><label className="form-field"><span>Property</span><select value={selectedPropertyId} onChange={(event) => setSelectedPropertyId(event.target.value)}>{properties.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.city || 'No city'}</option>)}</select></label><span><MapPin size={14} /> {property?.timezone} · {property?.currency}</span></div>}
     {property && !propertyEditorOpen && <>
-      <div className="listing-property-heading"><div><span className="eyebrow">{property.published ? 'Published listing' : 'Draft listing'}</span><h2>{property.name}</h2><p>{property.description || property.address || property.city || 'No property description yet.'}</p></div><button className="button button-dark" onClick={() => { setEditingUnit(null); setUnitEditorOpen(true) }}><Plus size={16} /> Add unit</button></div>
-      {unitEditorOpen && <UnitForm property={property} unit={editingUnit} amenities={amenities} onSave={saveUnitDetails} onCancel={() => { setUnitEditorOpen(false); setEditingUnit(null) }} busy={busy} />}
+      <div className="listing-property-heading"><div><span className="eyebrow">{property.published ? 'Published listing' : 'Draft listing'}</span><h2>{property.name}</h2><p>{property.description || property.address || property.city || 'No property description yet.'}</p></div>{canManageListings && <button className="button button-dark" onClick={() => { setEditingUnit(null); setUnitEditorOpen(true) }}><Plus size={16} /> Add unit</button>}</div>
+      {unitEditorOpen && canManageListings && <UnitForm property={property} unit={editingUnit} amenities={amenities} onSave={saveUnitDetails} onCancel={() => { setUnitEditorOpen(false); setEditingUnit(null) }} busy={busy} />}
       {property.units.length === 0 && <EmptyState title="No bookable units" body="Add an apartment, studio, or room to this property." />}
       <div className="managed-unit-list">{property.units.map((unit) => <article className="managed-unit" key={unit.id}>
-        <div className="managed-unit-heading"><div><span className="eyebrow">{unit.unit_type} · {unit.active ? 'Active' : 'Inactive'}</span><h3>{unit.name}</h3><p>Up to {unit.capacity} guests · {unit.bedrooms} bedrooms · {unit.bathrooms} bathrooms</p></div><div className="managed-unit-price"><strong>{formatMoney(unit.base_nightly_price, unit.currency)}</strong><span>base nightly rate</span><button className="icon-button" aria-label={`Edit ${unit.name}`} onClick={() => { setEditingUnit(unit); setUnitEditorOpen(true) }}><Pencil size={15} /></button></div></div>
+        <div className="managed-unit-heading"><div><span className="eyebrow">{unit.unit_type} · {unit.active ? 'Active' : 'Inactive'}</span><h3>{unit.name}</h3><p>Up to {unit.capacity} guests · {unit.bedrooms} bedrooms · {unit.bathrooms} bathrooms</p></div><div className="managed-unit-price"><strong>{formatMoney(unit.base_nightly_price, unit.currency)}</strong><span>base nightly rate</span>{canManageListings && <button className="icon-button" aria-label={`Edit ${unit.name}`} onClick={() => { setEditingUnit(unit); setUnitEditorOpen(true) }}><Pencil size={15} /></button>}</div></div>
         {unit.description && <p className="managed-unit-description">{unit.description}</p>}
         <div className="amenity-list">{(unit.unit_amenities ?? []).map(({ amenities: item }) => item?.name).filter(Boolean).map((name) => <span key={name}>{name}</span>)}</div>
-        <div className="managed-photos">{(unit.unit_photos ?? []).slice().sort((a, b) => a.sort_order - b.sort_order).map((photo) => <div className="managed-photo" key={photo.id}><img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || unit.name} /><button className="icon-button" aria-label={`Remove photo ${photo.alt_text || unit.name}`} onClick={() => removePhoto(photo)} disabled={busy}><Trash2 size={14} /></button></div>)}
-          <label className="photo-upload"><ImagePlus size={18} /><span>Add photo</span><input type="file" accept="image/*" disabled={busy} onChange={(event) => addPhoto(unit, event)} /></label>
-          <label className="photo-alt-field"><span>Alt text for next photo</span><input value={photoAlt[unit.id] || ''} maxLength="180" onChange={(event) => setPhotoAlt((current) => ({ ...current, [unit.id]: event.target.value }))} /></label>
+        <div className="managed-photos">{(unit.unit_photos ?? []).slice().sort((a, b) => a.sort_order - b.sort_order).map((photo) => <div className="managed-photo" key={photo.id}><img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || unit.name} />{canManageListings && <button className="icon-button" aria-label={`Remove photo ${photo.alt_text || unit.name}`} onClick={() => removePhoto(photo)} disabled={busy}><Trash2 size={14} /></button>}</div>)}
+          {canManageListings && <><label className="photo-upload"><ImagePlus size={18} /><span>Add photo</span><input type="file" accept="image/*" disabled={busy} onChange={(event) => addPhoto(unit, event)} /></label><label className="photo-alt-field"><span>Alt text for next photo</span><input value={photoAlt[unit.id] || ''} maxLength="180" onChange={(event) => setPhotoAlt((current) => ({ ...current, [unit.id]: event.target.value }))} /></label></>}
         </div>
-        <div className="rate-rule-toggle"><button className="text-link" onClick={() => setRateUnitId(rateUnitId === unit.id ? '' : unit.id)}>{rateUnitId === unit.id ? 'Close seasonal pricing' : `Seasonal pricing (${unit.unit_rate_rules?.length ?? 0})`}</button></div>
+        {canManageListings && <div className="rate-rule-toggle"><button className="text-link" onClick={() => setRateUnitId(rateUnitId === unit.id ? '' : unit.id)}>{rateUnitId === unit.id ? 'Close seasonal pricing' : `Seasonal pricing (${unit.unit_rate_rules?.length ?? 0})`}</button></div>}
         {(unit.unit_rate_rules ?? []).length > 0 && <div className="rate-rule-list">{unit.unit_rate_rules.map((rule) => <span key={rule.id}>{rule.date_from}–{rule.date_to}: {formatMoney(rule.nightly_price, rule.currency)}</span>)}</div>}
-        {rateUnitId === unit.id && <RateRuleForm unit={unit} busy={busy} onSave={(values) => saveRate(unit, values)} />}
+        {canManageListings && rateUnitId === unit.id && <RateRuleForm unit={unit} busy={busy} onSave={(values) => saveRate(unit, values)} />}
       </article>)}</div>
     </>}
   </section>
