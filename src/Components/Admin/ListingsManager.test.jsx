@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ListingsManager from './ListingsManager'
 
 const mocks = vi.hoisted(() => ({
@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../../Services/stayService', () => mocks)
+
+afterEach(cleanup)
 
 const property = {
   id: 'property-1',
