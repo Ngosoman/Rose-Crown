@@ -35,7 +35,7 @@ export async function getGuestBookings() {
   if (!supabase) return { data: [], error: new Error('Connect Supabase to view bookings.') }
   const { data, error } = await supabase
     .from('bookings')
-    .select('id,reference,guest_name,guest_email,guest_count,check_in,checkout,status,payment_status,agreed_total,currency,hold_expires_at,created_at,booking_extensions(id,requested_checkout,status,reason,created_at),unit:units(name,unit_type,property:properties(name,city,timezone))')
+    .select('id,reference,guest_name,guest_email,guest_count,check_in,checkout,status,payment_status,agreed_total,currency,hold_expires_at,created_at,booking_extensions(id,requested_checkout,status,reason,created_at),unit:units!bookings_unit_id_fkey(name,unit_type,property:properties(name,city,timezone))')
     .order('created_at', { ascending: false })
   return { data: data ?? [], error }
 }
@@ -101,7 +101,7 @@ export async function getPendingExtensions() {
   if (!supabase) return { data: [], error: new Error('Connect Supabase to manage extensions.') }
   const { data, error } = await supabase
     .from('booking_extensions')
-    .select('id,booking_id,requested_by,original_checkout,requested_checkout,status,reason,created_at,booking:bookings!inner(reference,guest_name,guest_email,checkout,unit:units(id,name,property:properties(id,name,timezone)))')
+    .select('id,booking_id,requested_by,original_checkout,requested_checkout,status,reason,created_at,booking:bookings!inner(reference,guest_name,guest_email,checkout,unit:units!bookings_unit_id_fkey(id,name,property:properties(id,name,timezone)))')
     .eq('status', 'pending')
     .order('created_at')
   return { data: data ?? [], error }
@@ -259,7 +259,7 @@ export async function getStaffBookings(propertyId) {
   if (!supabase) return { data: [], error: new Error('Connect Supabase to view bookings.') }
   let query = supabase
     .from('bookings')
-    .select('id,reference,guest_name,guest_email,guest_phone,guest_count,check_in,checkout,status,payment_status,agreed_total,currency,hold_expires_at,source,unit:units(id,name,property_id,property:properties(id,name,timezone))')
+    .select('id,reference,guest_name,guest_email,guest_phone,guest_count,check_in,checkout,status,payment_status,agreed_total,currency,hold_expires_at,source,unit:units!bookings_unit_id_fkey(id,name,property_id,property:properties(id,name,timezone))')
     .order('check_in', { ascending: true })
   if (propertyId) query = query.eq('unit.property_id', propertyId)
   const { data, error } = await query
