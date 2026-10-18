@@ -2,9 +2,9 @@
 
 ## Scheduled Job
 
-`supabase/functions/process-notifications/index.ts` is an authenticated-by-secret Edge Function (`verify_jwt = false`; `x-rose-crown-cron-secret` is required). It calls `run_scheduled_jobs`, `enqueue_daily_checkout_briefings`, then claims due messages using `claim_notifications` with `FOR UPDATE SKIP LOCKED`.
+`supabase/functions/process-notifications/index.ts` is deployed as an authenticated-by-secret Edge Function (`verify_jwt = false`; `x-rose-crown-cron-secret` is required). It calls `run_scheduled_jobs`, `enqueue_daily_checkout_briefings`, then claims due messages using `claim_notifications` with `FOR UPDATE SKIP LOCKED`.
 
-Configure Supabase Cron to invoke the function every five minutes. Example setup is in [Deployment](DEPLOYMENT.md). No schedule has been installed in a Supabase project from this workspace.
+Supabase Cron is active every five minutes and invokes `run_rose_crown_cron_jobs()` in PostgreSQL. It processes holds, checkout state, property-local briefings, and in-app notification status while recording each run. It does not call the Edge Function.
 
 ## Timezone Rules
 
@@ -20,6 +20,6 @@ Email is sent through the Resend HTTP API only when both `RESEND_API_KEY` and `R
 
 ## Retries and Monitoring
 
-Workers atomically claim messages and increment attempts. Abandoned processing claims can be reclaimed after 15 minutes. Provider failures store `last_error`, reschedule with capped exponential delay, and stop after five attempts. Deduplication keys prevent duplicate event deliveries, including new checkout timestamps after an approved extension. Staff can inspect notification status and failures in the Alerts view.
+The Edge Function atomically claims messages and increments attempts when invoked. Abandoned processing claims can be reclaimed after 15 minutes. Provider failures store `last_error`, reschedule with capped exponential delay, and stop after five attempts. Deduplication keys prevent duplicate event deliveries, including new checkout timestamps after an approved extension. Staff can inspect notification status and failures in the Alerts view.
 
-Actual email/SMS/WhatsApp delivery and scheduled job history require a deployed function, secrets, and Cron configuration. Invocation alone is not treated as delivery success.
+Database scheduling is active and one successful job run is recorded. Outbound email/SMS/WhatsApp delivery still requires scheduling the Edge Function and configuring providers/secrets. Invocation alone is not treated as delivery success.

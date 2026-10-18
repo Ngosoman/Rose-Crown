@@ -52,7 +52,7 @@ Before the first property can be managed, an authorized operator must provision 
 - React JSX, Vite, Tailwind CSS, React Router, React Hook Form, Zod, Lucide, Recharts, and a custom accessible calendar.
 - Supabase Auth and RLS for identity/access; PostgreSQL RPCs for availability-critical work; Storage for listing photos; Realtime for view refresh.
 - A 15-minute request hold and GiST exclusion constraint protect the same date-range availability rules for both website and staff-created bookings.
-- A scheduled Edge Function processes checkout reminders and notification delivery. Its database jobs are installed, but the Edge Function and Cron schedule are not deployed. Email uses Resend when configured. SMS/WhatsApp remain visibly failed until a provider is implemented and configured.
+- A five-minute Supabase Cron job processes holds, checkout state, briefings, and in-app notification status. The deployed Edge Function claims outbound notifications when invoked; Resend requires credentials, and SMS/WhatsApp require a provider.
 
 See [Architecture](docs/ARCHITECTURE.md), [Database Schema](docs/DATABASE_SCHEMA.md), and [Booking Workflow](docs/BOOKING_WORKFLOW.md).
 

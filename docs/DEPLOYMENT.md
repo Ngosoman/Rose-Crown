@@ -13,7 +13,7 @@ npx supabase test db
 npm run dev
 ```
 
-No local Docker, psql, or Supabase CLI are available. The frontend has been connected to the shared project; migrations were applied remotely through the authenticated dashboard SQL Editor.
+Docker and psql are unavailable. Supabase CLI 2.121 was run through `npx` for Edge Function deployment; migrations were applied remotely through the authenticated dashboard SQL Editor.
 
 ## Staging
 
@@ -30,32 +30,14 @@ npx supabase secrets set ROSE_CROWN_CRON_SECRET=<secret> --project-ref <staging-
 ```
 
 Set Resend secrets the same way when configured. Do not put secrets in `.env.example`, source, SQL, or build variables.
-5. Enable `pg_cron`, `pg_net`, and Vault through the Supabase-supported dashboard/extension workflow. Store the function URL and Cron secret in Vault. Schedule the endpoint every five minutes:
-
-```sql
-select cron.schedule(
-  'rose-crown-notifications-every-five-minutes',
-  '*/5 * * * *',
-  $job$
-    select net.http_post(
-      url := (select decrypted_secret from vault.decrypted_secrets where name = 'rose-crown_function_url') || '/functions/v1/process-notifications',
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        'x-rose-crown-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'rose-crown_cron_secret')
-      ),
-      body := '{}'::jsonb
-    );
-  $job$
-);
-```
-
-Verify Cron run history, Edge Function responses, notification attempts, and delivery state. Do not treat an HTTP request being enqueued as successful email delivery.
-6. Create an initial super admin using trusted Supabase tooling, then create properties, units, rates, amenities, property memberships, and storage images. Property/unit administration and image upload UI are not yet implemented in the frontend.
+5. The shared project already has `pg_cron` enabled by migration 5 and an active `rose-crown-database-jobs-every-five-minutes` job. It calls the guarded `run_rose_crown_cron_jobs()` wrapper, which records run history and handles holds, checkout transitions, briefings, and in-app notification status. Verify `public.scheduled_job_runs` and `cron.job_run_details` after deployment.
+6. The Edge Function is deployed and `ROSE_CROWN_CRON_SECRET` is stored as a server-side secret, but no scheduled HTTP invocation is configured. To activate email delivery, configure a secure secret reference for the Cron HTTP caller, schedule the function, then set Resend secrets. SMS/WhatsApp providers remain separate work.
+7. Create an initial super admin using trusted Supabase tooling, then create properties, units, rates, amenities, property memberships, and storage images. The Auth dashboard currently lists no signed-up users. Property/unit administration and image upload UI are not yet implemented in the frontend.
 
 ## Remote Migration Workflow
 
-The four local migration files were executed as one transaction in the shared Rose-Crown project on the `main` branch. The dashboard records versions `20261018000100` through `20261018000400`; catalog verification found 18 public tables with RLS, 26 policies, 15 expected RPCs, two GiST exclusion constraints, and the public listing bucket. The project’s development/production designation is not known, so treat this as an applied shared environment, not as a certified staging deployment.
+The five migration files were executed as ordered transactions in the shared Rose-Crown project on the `main` branch. The dashboard records versions `20261018000100` through `20261018000500`; catalog verification found 19 public tables with RLS, 26 policies, 16 expected RPCs, two GiST exclusion constraints, the listing bucket, an active five-minute Cron job, and a successful scheduler health run. The project’s development/production designation is not known, so treat this as an applied shared environment, not as a certified staging deployment.
 
 The migration batch and version rows were submitted directly through the Supabase SQL Editor because the CLI/psql/Docker are unavailable. Migration dashboard version rows show “Name not available”; future CLI-based migration management should first inspect and align this history. Never use `db reset`, drop existing tables, or force migration history.
 
-`process-notifications` has not been deployed. `pg_cron`, `pg_net`, and Vault scheduling have not been enabled/configured. Deploy the function, set `ROSE_CROWN_CRON_SECRET` (and optional Resend secrets), configure the five-minute schedule, then verify run and delivery history. Payment gateway, SMS, and WhatsApp configuration remain launch blockers.
+`process-notifications` is deployed and `ROSE_CROWN_CRON_SECRET` is stored server-side. The current Cron schedule invokes the database wrapper directly; it does not dispatch the Edge Function. Secure Cron-to-function invocation and Resend credentials are needed for outbound email. Payment gateway, SMS, and WhatsApp configuration remain launch blockers.
