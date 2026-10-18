@@ -335,6 +335,7 @@ h1, h2, h3 { color: var(--ink); }
 .metric-tile > strong { display: block; margin: 13px 0 5px; font-family: var(--serif); font-size: 27px; font-weight: 500; }
 .metric-tile > small { color: var(--ink-soft); font-size: 9px; }
 .admin-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: -17px 0 23px; }
+.admin-toolbar > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .admin-toolbar > span { color: var(--ink-soft); font-size: 9px; }
 .manual-booking-panel { margin: 0 0 35px; padding: 23px; border: 1px solid var(--line); background: white; }
 .manual-booking-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 17px; }
@@ -376,6 +377,9 @@ h1, h2, h3 { color: var(--ink); }
 .agenda-events { display: grid; gap: 7px; }
 .agenda-empty { padding: 10px 0; color: var(--ink-soft); font-size: 10px; }
 .agenda-event { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 12px; padding: 10px; border-left: 2px solid var(--sage); background: white; }
+.agenda-block { border-left-color: #687285; background: #f0f0f2; }
+.agenda-block .plain-button { font-size: 9px; }
+.block-type-pill { padding: 4px 7px; background: #e1e3e9; color: #4c5363; font-size: 8px; font-weight: 700; }
 .agenda-event > strong { font-family: var(--serif); font-size: 14px; font-weight: 500; }
 .agenda-event > span:not(.status-pill) { color: var(--ink-soft); font-size: 9px; }
 .calendar-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; padding: 13px 0; color: var(--ink-soft); font-size: 8px; }
@@ -557,6 +561,8 @@ h1, h2, h3 { color: var(--ink); }
   .admin-top-actions { gap: 5px; }
   .admin-top-actions .icon-button { width: 34px; height: 34px; }
   .admin-toolbar { align-items: flex-start; flex-direction: column; margin: -7px 0 18px; }
+  .admin-toolbar > div { width: 100%; }
+  .admin-toolbar .button { min-height: 40px; padding-inline: 11px; }
   .manual-booking-panel { padding: 15px; }
   .manual-booking-heading h2 { font-size: 21px; }
   .manual-booking-actions { align-items: stretch; flex-direction: column; }
