@@ -215,6 +215,6 @@ export async function recordCheckout(bookingId, notes = '') {
 
 export function listingPhotoUrl(path) {
   if (!supabase || !path) return null
-  const { data } = supabase.storage.from('stayease-listings').getPublicUrl(path)
+  const { data } = supabase.storage.from('rose-crown-listings').getPublicUrl(path)
   return data.publicUrl
 }

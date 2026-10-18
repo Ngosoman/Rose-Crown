@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-stayease-cron-secret',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-rose-crown-cron-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Origin': '*',
 }
@@ -30,9 +30,9 @@ Deno.serve(async (request) => {
 
   const projectUrl = Deno.env.get('SUPABASE_URL')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  const cronSecret = Deno.env.get('STAYEASE_CRON_SECRET')
+  const cronSecret = Deno.env.get('ROSE_CROWN_CRON_SECRET')
   if (!projectUrl || !serviceRoleKey || !cronSecret) return json({ error: 'Worker secrets are not configured.' }, 503)
-  if (request.headers.get('x-stayease-cron-secret') !== cronSecret) return json({ error: 'Unauthorized.' }, 401)
+  if (request.headers.get('x-rose-crown-cron-secret') !== cronSecret) return json({ error: 'Unauthorized.' }, 401)
 
   const admin = createClient(projectUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },

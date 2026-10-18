@@ -16,13 +16,13 @@ Do not expose a service-role key in the frontend or commit it. After initial set
 
 RLS is enabled for all application tables. Anonymous access is limited to published listing/unit/photo/amenity/rate reads and the public booking/availability RPCs. Guests read their own bookings, extensions, and notifications. Staff reads/writes are restricted to assigned properties. Payment/audit records are not public. Browser access to booking writes, reservation rows, notification delivery state, payment state, and audit inserts is withheld.
 
-Storage bucket `stayease-listings` is public-read for listing images. Staff upload/update/delete checks the first storage path folder as a property UUID against property membership. Store object paths, not image bytes, in Postgres.
+Storage bucket `rose-crown-listings` is public-read for listing images. Staff upload/update/delete checks the first storage path folder as a property UUID against property membership. Store object paths, not image bytes, in Postgres.
 
 ## RPC and Secret Boundaries
 
 Security-definer functions set `search_path = ''`, qualify objects, validate `auth.uid()`/property membership, and have explicit execution grants. The scheduled worker alone receives `run_scheduled_jobs`, `enqueue_daily_checkout_briefings`, and `claim_notifications` execution through the Supabase service role. Service-role and provider secrets belong only in Edge Function secret storage.
 
-The Edge Function has JWT verification disabled only because Cron uses a separate `STAYEASE_CRON_SECRET` header. Rotate it if exposed. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` only as server-side secrets. Public Vite variables may contain only the Supabase URL and publishable/anon key.
+The Edge Function has JWT verification disabled only because Cron uses a separate `ROSE_CROWN_CRON_SECRET` header. Rotate it if exposed. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` only as server-side secrets. Public Vite variables may contain only the Supabase URL and publishable/anon key.
 
 ## Operational Cautions
 

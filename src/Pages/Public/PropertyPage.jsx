@@ -37,7 +37,7 @@ export default function PropertyPage() {
 
   return <section className="property-page section-wrap">
     <Link className="back-link" to="/stays"><ArrowLeft size={15} /> All stays</Link>
-    <div className="property-heading"><div><span className="eyebrow"><MapPin size={13} /> {property.city || property.address || 'StayEase collection'}</span><h1>{property.name}</h1></div><p>{property.description}</p></div>
+    <div className="property-heading"><div><span className="eyebrow"><MapPin size={13} /> {property.city || property.address || 'Rose-Crown collection'}</span><h1>{property.name}</h1></div><p>{property.description}</p></div>
     <div className="property-gallery">{property.units.slice(0, 3).map((unit, index) => {
       const photo = getUnitImage(unit)
       return <div className={`gallery-tile gallery-tile-${index + 1}`} key={unit.id}>{photo ? <img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || unit.name} /> : <div className="image-empty"><span>{unit.name} / {unit.unit_type}</span></div>}</div>

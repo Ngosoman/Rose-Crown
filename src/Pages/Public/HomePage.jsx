@@ -60,19 +60,19 @@ export default function HomePage() {
         {loading && <LoadingState label="Finding available stays" />}
         {!loading && !configured && <ConfigState />}
         {!loading && error && <ErrorState message={error} />}
-        {!loading && configured && !error && featured.length === 0 && <EmptyState title="New stays are on their way" body="Published places will appear here as soon as they are added to StayEase." />}
+        {!loading && configured && !error && featured.length === 0 && <EmptyState title="New stays are on their way" body="Published places will appear here as soon as they are added to Rose-Crown." />}
         {!loading && featured.length > 0 && <div className="property-grid">{featured.map((property, index) => {
           const firstUnit = property.units[0]
           const photo = getUnitImage(firstUnit)
           return <Link className={`property-card property-card-${index + 1}`} to={`/stays/${property.slug}`} key={property.id}>
-            <div className="property-image">{photo ? <img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || firstUnit.name} /> : <div className="image-empty"><span>StayEase / {property.city || 'Stay'}</span></div>}<span className="image-count">{property.units.length} {property.units.length === 1 ? 'stay' : 'stays'}</span></div>
+            <div className="property-image">{photo ? <img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || firstUnit.name} /> : <div className="image-empty"><span>Rose-Crown / {property.city || 'Stay'}</span></div>}<span className="image-count">{property.units.length} {property.units.length === 1 ? 'stay' : 'stays'}</span></div>
             <div className="property-card-copy"><div><span className="eyebrow">{property.city || 'A local favorite'}</span><h3>{property.name}</h3></div><ArrowUpRight size={18} /></div>
             <p className="property-summary">{firstUnit.description || property.description || `${firstUnit.unit_type} · Sleeps ${firstUnit.capacity}`}</p>
             <div className="property-card-meta"><span>{firstUnit.unit_type} · Up to {firstUnit.capacity} guests</span><span>From {formatMoney(firstUnit.base_nightly_price, firstUnit.currency)} <small>/ night</small></span></div>
           </Link>
         })}</div>}
       </section>
-      <section className="closing-band"><div className="closing-inner"><span className="eyebrow">Make room for a little more</span><h2>Good stays make<br />good <em>stories.</em></h2><Link className="button button-light" to="/stays">Find your stay <ArrowRight size={17} /></Link></div><div className="closing-index">STAYEASE / 2026</div></section>
+      <section className="closing-band"><div className="closing-inner"><span className="eyebrow">Make room for a little more</span><h2>Good stays make<br />good <em>stories.</em></h2><Link className="button button-light" to="/stays">Find your stay <ArrowRight size={17} /></Link></div><div className="closing-index">ROSE_CROWN / 2026</div></section>
     </>
   )
 }

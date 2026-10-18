@@ -1,8 +1,9 @@
-# StayEase Implementation Plan
+# Rose-Crown Implementation Plan
 
 ## Inspection
 - [x] Confirmed this is the untouched React 19 / Vite 8 starter; no application routes or business features exist yet.
 - [x] Confirmed there are no Supabase project files, migration history, CLI, configured environment variables, or accessible Supabase MCP tools in this session.
+- [x] Inspected the shared Rose-Crown Supabase dashboard in read-only mode: the main branch is healthy, the migration screen shows no migrations, the public schema has no base tables, and only pgcrypto is installed from the checked extensions.
 - [x] Preserved the existing React/Vite/Tailwind setup and uncommitted Git state.
 - [x] Ignore local environment secrets and generated Supabase state before adding configuration examples.
 
@@ -16,8 +17,9 @@
 
 ## Current Blockers / Verification Notes
 - Remote Supabase inspection or migration application cannot be performed until an authorized project connection and CLI/configuration are provided. No remote changes have been attempted.
+- The Rose-Crown Supabase dashboard is accessible for read-only inspection. No migrations were applied because the shared project shows only a `main` branch and its development/production role has not been confirmed.
 - Neither `supabase`, `psql`, nor `docker` is installed/available in the current environment; migrations and Edge Functions remain unexecuted/unapplied.
-- Public Supabase URL and publishable key are not configured. The app must show setup guidance and must not fabricate property or booking data.
+- The project URL is known from the dashboard, but the local `.env` has no Supabase URL or publishable/anon key populated. The app shows setup guidance and does not fabricate property or booking data.
 - Email, SMS, WhatsApp, and payment provider credentials are not present. In-app queues and the Resend adapter are implemented; unconfigured external delivery is recorded as failed and payments remain pending.
 - Client decisions needed before policy is finalized: cancellation/refund rules, payment provider and deposit rules, cleaning turnaround, fee/tax policy, extension fee policy, staff recipients, and legal policy copy.
 

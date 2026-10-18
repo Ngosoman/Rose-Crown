@@ -20,13 +20,13 @@ No local Docker, psql, Supabase CLI, or configured project credentials were avai
 1. Create/choose a non-production Supabase project and inspect its migration history before linking. Use the actual project reference; do not infer one from this repository.
 2. Review the ordered SQL, generated policy state, and storage bucket on an isolated project. Never use a production reset as a migration shortcut.
 3. Set browser environment variables in the staging hosting provider and secrets in Supabase Edge Function secrets:
-   - `STAYEASE_CRON_SECRET`
+   - `ROSE_CROWN_CRON_SECRET`
    - `RESEND_API_KEY` and `RESEND_FROM_EMAIL` when Resend is ready
 4. Deploy `process-notifications`:
 
 ```sh
 npx supabase functions deploy process-notifications --project-ref <staging-project-ref>
-npx supabase secrets set STAYEASE_CRON_SECRET=<secret> --project-ref <staging-project-ref>
+npx supabase secrets set ROSE_CROWN_CRON_SECRET=<secret> --project-ref <staging-project-ref>
 ```
 
 Set Resend secrets the same way when configured. Do not put secrets in `.env.example`, source, SQL, or build variables.
@@ -34,14 +34,14 @@ Set Resend secrets the same way when configured. Do not put secrets in `.env.exa
 
 ```sql
 select cron.schedule(
-  'stayease-notifications-every-five-minutes',
+  'rose-crown-notifications-every-five-minutes',
   '*/5 * * * *',
   $job$
     select net.http_post(
-      url := (select decrypted_secret from vault.decrypted_secrets where name = 'stayease_function_url') || '/functions/v1/process-notifications',
+      url := (select decrypted_secret from vault.decrypted_secrets where name = 'rose-crown_function_url') || '/functions/v1/process-notifications',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'x-stayease-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'stayease_cron_secret')
+        'x-rose-crown-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'rose-crown_cron_secret')
       ),
       body := '{}'::jsonb
     );

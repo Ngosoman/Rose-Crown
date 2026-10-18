@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { formatMoney, getUnitImage, humanizeStatus } from './format'
 
-describe('StayEase display helpers', () => {
+describe('Rose-Crown display helpers', () => {
   it('formats amounts using the selected currency', () => {
     expect(formatMoney(125, 'USD')).toContain('125.00')
   })

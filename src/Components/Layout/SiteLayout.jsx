@@ -9,7 +9,7 @@ export default function SiteLayout() {
   return (
     <div className="app-frame">
       <header className="site-header">
-        <Link className="brand" to="/" aria-label="StayEase home"><span className="brand-mark"><BedDouble size={19} /></span><span>StayEase</span></Link>
+        <Link className="brand" to="/" aria-label="Rose-Crown home"><span className="brand-mark"><BedDouble size={19} /></span><span>Rose-Crown</span></Link>
         <button className="icon-button mobile-menu-toggle" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
         <nav className={menuOpen ? 'site-nav is-open' : 'site-nav'} aria-label="Main navigation">
           <NavLink to="/stays" onClick={() => setMenuOpen(false)}>Find a stay</NavLink>
@@ -19,7 +19,7 @@ export default function SiteLayout() {
         <Link className="header-account" to="/auth"><CircleUserRound size={18} /><span>Sign in</span></Link>
       </header>
       <main><Outlet /></main>
-      <footer className="site-footer"><Link className="brand brand-small" to="/"><span className="brand-mark"><BedDouble size={16} /></span><span>StayEase</span></Link><p>Thoughtful stays, made simple.</p><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/contact">Contact</Link></div><small>© {currentYear} StayEase</small></footer>
+      <footer className="site-footer"><Link className="brand brand-small" to="/"><span className="brand-mark"><BedDouble size={16} /></span><span>Rose-Crown</span></Link><p>Thoughtful stays, made simple.</p><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/contact">Contact</Link></div><small>© {currentYear} Rose-Crown</small></footer>
     </div>
   )
 }

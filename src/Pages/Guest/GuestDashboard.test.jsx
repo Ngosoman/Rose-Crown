@@ -6,7 +6,7 @@ import GuestDashboard from './GuestDashboard'
 describe('guest route without a configured backend', () => {
   it('does not fabricate guest records and points to Supabase setup', () => {
     render(<MemoryRouter><GuestDashboard /></MemoryRouter>)
-    expect(screen.getByRole('heading', { name: 'Connect your StayEase database' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Connect your Rose-Crown database' })).toBeInTheDocument()
     expect(screen.queryByText('No stays on the calendar yet')).not.toBeInTheDocument()
   })
 })

@@ -525,8 +525,8 @@ grant select on public.profiles, public.user_roles, public.property_members, pub
 grant update (display_name, phone) on public.profiles to authenticated;
 grant insert, update, delete on public.properties, public.units, public.unit_photos, public.unit_amenities, public.unit_rate_rules, public.unit_blocks, public.property_members, public.user_roles to authenticated;
 
-insert into storage.buckets(id, name, public) values ('stayease-listings', 'stayease-listings', true) on conflict (id) do nothing;
-create policy listing_photos_public_read on storage.objects for select using (bucket_id = 'stayease-listings');
-create policy listing_photos_staff_insert on storage.objects for insert to authenticated with check (bucket_id = 'stayease-listings' and public.can_manage_property(((storage.foldername(name))[1])::uuid));
-create policy listing_photos_staff_update on storage.objects for update to authenticated using (bucket_id = 'stayease-listings' and public.can_manage_property(((storage.foldername(name))[1])::uuid)) with check (bucket_id = 'stayease-listings' and public.can_manage_property(((storage.foldername(name))[1])::uuid));
-create policy listing_photos_staff_delete on storage.objects for delete to authenticated using (bucket_id = 'stayease-listings' and public.can_manage_property(((storage.foldername(name))[1])::uuid));
+insert into storage.buckets(id, name, public) values ('rose-crown-listings', 'rose-crown-listings', true) on conflict (id) do nothing;
+create policy listing_photos_public_read on storage.objects for select using (bucket_id = 'rose-crown-listings');
+create policy listing_photos_staff_insert on storage.objects for insert to authenticated with check (bucket_id = 'rose-crown-listings' and public.can_manage_property(((storage.foldername(name))[1])::uuid));
+create policy listing_photos_staff_update on storage.objects for update to authenticated using (bucket_id = 'rose-crown-listings' and public.can_manage_property(((storage.foldername(name))[1])::uuid)) with check (bucket_id = 'rose-crown-listings' and public.can_manage_property(((storage.foldername(name))[1])::uuid));
+create policy listing_photos_staff_delete on storage.objects for delete to authenticated using (bucket_id = 'rose-crown-listings' and public.can_manage_property(((storage.foldername(name))[1])::uuid));

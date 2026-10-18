@@ -1,6 +1,6 @@
-# StayEase
+# Rose-Crown
 
-StayEase is a React/Vite booking and property operations interface backed by Supabase. Property listings, booking requests, staff actions, and notifications are read from or committed to PostgreSQL; the browser does not contain demo business records.
+Rose-Crown is a React/Vite booking and property operations interface backed by Supabase. Property listings, booking requests, staff actions, and notifications are read from or committed to PostgreSQL; the browser does not contain demo business records.
 
 ## Requirements
 

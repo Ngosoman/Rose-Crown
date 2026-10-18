@@ -2,7 +2,7 @@
 
 ## Scheduled Job
 
-`supabase/functions/process-notifications/index.ts` is an authenticated-by-secret Edge Function (`verify_jwt = false`; `x-stayease-cron-secret` is required). It calls `run_scheduled_jobs`, `enqueue_daily_checkout_briefings`, then claims due messages using `claim_notifications` with `FOR UPDATE SKIP LOCKED`.
+`supabase/functions/process-notifications/index.ts` is an authenticated-by-secret Edge Function (`verify_jwt = false`; `x-rose-crown-cron-secret` is required). It calls `run_scheduled_jobs`, `enqueue_daily_checkout_briefings`, then claims due messages using `claim_notifications` with `FOR UPDATE SKIP LOCKED`.
 
 Configure Supabase Cron to invoke the function every five minutes. Example setup is in [Deployment](DEPLOYMENT.md). No schedule has been installed in a Supabase project from this workspace.
 

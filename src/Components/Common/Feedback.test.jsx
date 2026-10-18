@@ -5,7 +5,7 @@ import { ConfigState, EmptyState, ErrorState, LoadingState } from './Feedback'
 describe('shared feedback states', () => {
   it('gives an actionable configuration message when Supabase is missing', () => {
     render(<ConfigState />)
-    expect(screen.getByRole('heading', { name: 'Connect your StayEase database' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Connect your Rose-Crown database' })).toBeInTheDocument()
     expect(screen.getByText(/VITE_SUPABASE_URL/)).toBeInTheDocument()
   })
 
