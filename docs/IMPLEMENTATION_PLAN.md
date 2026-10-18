@@ -4,7 +4,6 @@
 - [x] Confirmed this is the untouched React 19 / Vite 8 starter; no application routes or business features exist yet.
 - [x] At initial repository inspection, there were no local Supabase files, migration history, configured environment variables, or accessible Supabase MCP tools.
 - [x] Before deployment, inspected the shared Rose-Crown project: healthy `main` branch, no app migrations or public tables, and pgcrypto already installed in `extensions`.
-- [x] Inspected the shared Rose-Crown Supabase project before migration: healthy `main` branch, no app tables/migrations, and pgcrypto already in `extensions`.
 - [x] Preserved the existing React/Vite/Tailwind setup and uncommitted Git state.
 - [x] Ignore local environment secrets and generated Supabase state before adding configuration examples.
 
@@ -18,9 +17,10 @@
 
 ## Current Blockers / Verification Notes
 - The five ordered SQL migrations were applied atomically through the authenticated Supabase SQL Editor to the shared Rose-Crown project on `main`; dashboard history and live catalog checks confirm versions 20261018000100 through 20261018000500.
-- The project branch's development/production role remains unconfirmed. No reset, drop, truncate, or user-data migration was performed.
+- Supabase `main` is the Production backend for `rose-crown.vercel.app`. Migrations were applied after the user authorized proceeding; no reset, drop, truncate, or user-data migration was performed.
 - Supabase CLI 2.121 was provisioned through `npx`; psql and Docker are unavailable and pgTAP was not run. The Edge Function is deployed, its server-side cron secret is set, and the database Cron schedule is active. Outbound channel delivery is not scheduled.
 - The ignored local `.env` contains the project URL and public anon key; Auth health returned HTTP 200. Public `properties` reads and the availability RPC return HTTP 200; anonymous booking reads return HTTP 401 as expected.
+- Vercel Production now has `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; the latest `main` deployment is Ready and the live page shows the real empty-list state instead of setup guidance.
 - Email, SMS, WhatsApp, and payment provider credentials are not present. In-app queues and the Resend adapter are implemented; unconfigured external delivery is recorded as failed and payments remain pending.
 - Client decisions needed before policy is finalized: cancellation/refund rules, payment provider and deposit rules, cleaning turnaround, fee/tax policy, extension fee policy, staff recipients, and legal policy copy.
 

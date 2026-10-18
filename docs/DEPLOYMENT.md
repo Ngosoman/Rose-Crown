@@ -36,8 +36,12 @@ Set Resend secrets the same way when configured. Do not put secrets in `.env.exa
 
 ## Remote Migration Workflow
 
-The five migration files were executed as ordered transactions in the shared Rose-Crown project on the `main` branch. The dashboard records versions `20261018000100` through `20261018000500`; catalog verification found 19 public tables with RLS, 26 policies, 16 expected RPCs, two GiST exclusion constraints, the listing bucket, an active five-minute Cron job, and a successful scheduler health run. The project’s development/production designation is not known, so treat this as an applied shared environment, not as a certified staging deployment.
+The five migration files were executed as ordered transactions in the shared Rose-Crown project on the `main` branch. The dashboard records versions `20261018000100` through `20261018000500`; catalog verification found 19 public tables with RLS, 26 policies, 16 expected RPCs, two GiST exclusion constraints, the listing bucket, an active five-minute Cron job, and a successful scheduler health run. This Supabase `main` project is the Production backend for `rose-crown.vercel.app`; these changes are live, not a staging deployment.
 
 The migration batch and version rows were submitted directly through the Supabase SQL Editor before the CLI was provisioned; psql and Docker remain unavailable. The migration dashboard shows version rows with “Name not available”; future CLI-based migration management should first inspect and align this history. Never use `db reset`, drop existing tables, or force migration history.
 
 `process-notifications` is deployed and `ROSE_CROWN_CRON_SECRET` is stored server-side. The current Cron schedule invokes the database wrapper directly; it does not dispatch the Edge Function. Secure Cron-to-function invocation and Resend credentials are needed for outbound email. Payment gateway, SMS, and WhatsApp configuration remain launch blockers.
+
+## Vercel Production
+
+Production now has `VITE_SUPABASE_URL` and the public `VITE_SUPABASE_ANON_KEY`. After saving them, the latest `main` commit was redeployed and Vercel reports the deployment Ready. The live page no longer shows database setup guidance; it shows the real empty-list state until a property is published. These are public browser variables; never configure a service-role key as a `VITE_` variable.
