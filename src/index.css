@@ -344,6 +344,51 @@ h1, h2, h3 { color: var(--ink); }
 .manual-booking-form { display: grid; gap: 15px; }
 .manual-booking-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 13px; border-top: 1px solid var(--line); }
 .manual-booking-actions > span { color: var(--ink-soft); font-size: 9px; }
+.listings-manager { border-top: 1px solid var(--line); padding: 20px 0 8px; }
+.listings-toolbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+.listing-property-select { display: flex; align-items: end; justify-content: space-between; gap: 15px; max-width: 560px; margin-bottom: 25px; }
+.listing-property-select > span { display: flex; align-items: center; gap: 6px; padding-bottom: 12px; color: var(--ink-soft); font-size: 10px; }
+.listing-property-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.listing-property-heading h2 { margin: 6px 0; font-family: var(--serif); font-size: 26px; font-weight: 500; }
+.listing-property-heading p { max-width: 560px; margin: 0; color: var(--ink-soft); font-size: 10px; line-height: 1.7; }
+.managed-unit-list { display: grid; gap: 12px; padding-top: 14px; }
+.managed-unit { padding: 17px; border: 1px solid var(--line); background: white; }
+.managed-unit-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.managed-unit-heading h3 { margin: 5px 0; font-family: var(--serif); font-size: 20px; font-weight: 500; }
+.managed-unit-heading p, .managed-unit-description { margin: 0; color: var(--ink-soft); font-size: 10px; line-height: 1.6; }
+.managed-unit-price { display: grid; grid-template-columns: 1fr auto; align-items: center; justify-items: end; gap: 4px 9px; }
+.managed-unit-price strong { font-family: var(--serif); font-size: 17px; font-weight: 500; }
+.managed-unit-price > span { grid-column: 1 / -1; color: var(--ink-soft); font-size: 8px; }
+.managed-unit-price .icon-button { width: 30px; height: 30px; }
+.managed-unit > .amenity-list { margin-top: 12px; }
+.managed-photos { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--line); }
+.managed-photo { width: 92px; height: 68px; position: relative; overflow: hidden; background: var(--paper-deep); }
+.managed-photo img { width: 100%; height: 100%; object-fit: cover; }
+.managed-photo .icon-button { position: absolute; top: 4px; right: 4px; width: 27px; height: 27px; border-color: transparent; background: rgba(255,255,255,.9); }
+.photo-upload { width: 92px; height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px dashed #b7bdb7; color: var(--sage); font-size: 8px; cursor: pointer; }
+.photo-upload:hover { background: var(--sage-light); }
+.photo-upload input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+.photo-alt-field { display: grid; gap: 4px; min-width: 145px; color: var(--ink-soft); font-size: 8px; }
+.photo-alt-field input { height: 30px; padding: 5px 7px; border: 1px solid var(--line); font-size: 9px; }
+.rate-rule-toggle { margin-top: 12px; }
+.rate-rule-toggle .text-link { font-size: 10px; }
+.rate-rule-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.rate-rule-list span { padding: 6px 8px; background: var(--paper-deep); color: var(--ink-soft); font-size: 8px; }
+.listing-editor { margin: 15px 0 22px; padding: 20px; border: 1px solid var(--line); background: white; }
+.listing-editor .manual-booking-heading h2 { margin: 6px 0; font-family: var(--serif); font-size: 23px; font-weight: 500; }
+.listing-editor .manual-booking-heading p { margin: 0; color: var(--ink-soft); font-size: 9px; }
+.publish-toggle { grid-column: 1 / -1; display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 10px; cursor: pointer; }
+.publish-toggle input { accent-color: var(--sage); }
+.amenity-editor { margin: 0; padding: 10px; border: 1px solid var(--line); }
+.amenity-editor legend { padding-inline: 5px; color: var(--ink-soft); font-size: 9px; }
+.amenity-editor > div { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.amenity-editor label { display: flex; align-items: center; gap: 5px; color: var(--ink-soft); font-size: 9px; }
+.amenity-editor input { accent-color: var(--sage); }
+.listing-editor-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--line); }
+.listing-editor-actions > span { color: var(--ink-soft); font-size: 9px; }
+.listing-editor-actions > div { display: flex; gap: 7px; }
+.rate-rule-form { display: grid; gap: 10px; margin-top: 12px; padding: 12px; background: var(--paper); }
+.rate-rule-form > .button { justify-self: end; min-height: 36px; font-size: 10px; }
 .admin-workspace { border-top: 1px solid var(--line); }
 .booking-calendar { padding: 20px 0 10px; }
 .calendar-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 15px; padding-bottom: 17px; }
@@ -563,6 +608,16 @@ h1, h2, h3 { color: var(--ink); }
   .admin-toolbar { align-items: flex-start; flex-direction: column; margin: -7px 0 18px; }
   .admin-toolbar > div { width: 100%; }
   .admin-toolbar .button { min-height: 40px; padding-inline: 11px; }
+  .listing-property-select { align-items: stretch; flex-direction: column; gap: 0; }
+  .listing-property-select > span { padding: 0; }
+  .listing-property-heading { align-items: flex-start; flex-direction: column; }
+  .listing-editor { padding: 14px; }
+  .listing-editor-actions { align-items: stretch; flex-direction: column; }
+  .listing-editor-actions > div { width: 100%; }
+  .listing-editor-actions .button { flex: 1; }
+  .managed-unit { padding: 13px; }
+  .managed-unit-heading { flex-direction: column; }
+  .managed-unit-price { justify-items: start; }
   .manual-booking-panel { padding: 15px; }
   .manual-booking-heading h2 { font-size: 21px; }
   .manual-booking-actions { align-items: stretch; flex-direction: column; }
