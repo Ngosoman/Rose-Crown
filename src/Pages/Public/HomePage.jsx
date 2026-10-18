@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight, CalendarDays, MapPin, Search, ShieldCheck, Sparkles, Users } from 'lucide-react'
-import { getProperties } from '../../Services/stayService'
+import { getProperties, listingPhotoUrl } from '../../Services/stayService'
 import { ConfigState, EmptyState, ErrorState, LoadingState } from '../../Components/Common/Feedback'
 import { formatMoney, getUnitImage } from '../../Utils/format'
 
@@ -64,7 +64,7 @@ export default function HomePage() {
           const firstUnit = property.units[0]
           const photo = getUnitImage(firstUnit)
           return <Link className={`property-card property-card-${index + 1}`} to={`/stays/${property.slug}`} key={property.id}>
-            <div className="property-image">{photo ? <img src={`https://placeholder.invalid/${encodeURIComponent(photo.storage_path)}`} alt={photo.alt_text || firstUnit.name} /> : <div className="image-empty"><span>StayEase / {property.city || 'Stay'}</span></div>}<span className="image-count">{property.units.length} {property.units.length === 1 ? 'stay' : 'stays'}</span></div>
+            <div className="property-image">{photo ? <img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || firstUnit.name} /> : <div className="image-empty"><span>StayEase / {property.city || 'Stay'}</span></div>}<span className="image-count">{property.units.length} {property.units.length === 1 ? 'stay' : 'stays'}</span></div>
             <div className="property-card-copy"><div><span className="eyebrow">{property.city || 'A local favorite'}</span><h3>{property.name}</h3></div><ArrowUpRight size={18} /></div>
             <p className="property-summary">{firstUnit.description || property.description || `${firstUnit.unit_type} · Sleeps ${firstUnit.capacity}`}</p>
             <div className="property-card-meta"><span>{firstUnit.unit_type} · Up to {firstUnit.capacity} guests</span><span>From {formatMoney(firstUnit.base_nightly_price, firstUnit.currency)} <small>/ night</small></span></div>

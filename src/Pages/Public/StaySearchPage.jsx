@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowRight, MapPin, SlidersHorizontal } from 'lucide-react'
-import { getProperties } from '../../Services/stayService'
+import { getProperties, listingPhotoUrl } from '../../Services/stayService'
 import { ConfigState, EmptyState, ErrorState, LoadingState } from '../../Components/Common/Feedback'
 import { formatMoney, getUnitImage } from '../../Utils/format'
 
@@ -42,7 +42,7 @@ export default function StaySearchPage() {
     {!loading && configured && !error && results.length === 0 && <EmptyState title="No stays found just yet" body="Try a nearby city, fewer guests, or a different stay type." />}
     <div className="search-results">{results.map((unit) => {
       const photo = getUnitImage(unit)
-      return <article className="result-row" key={unit.id}><Link to={`/stays/${unit.property.slug}`} className="result-photo">{photo ? <img src={`https://placeholder.invalid/${encodeURIComponent(photo.storage_path)}`} alt={photo.alt_text || unit.name} /> : <div className="image-empty"><span>{unit.property.city || 'StayEase'}</span></div>}</Link><div className="result-info"><span className="eyebrow"><MapPin size={12} /> {unit.property.city || unit.property.name}</span><Link to={`/stays/${unit.property.slug}`}><h2>{unit.name} <span>at {unit.property.name}</span></h2></Link><p>{unit.description || `${unit.unit_type} · ${unit.bedrooms} bedrooms · Up to ${unit.capacity} guests`}</p><div className="amenity-list">{(unit.unit_amenities ?? []).slice(0, 3).map(({ amenities }) => amenities?.name).filter(Boolean).map((name) => <span key={name}>{name}</span>)}</div></div><div className="result-action"><strong>{formatMoney(unit.base_nightly_price, unit.currency)}</strong><span>starting / night</span><Link className="button button-outline" to={`/stays/${unit.property.slug}?unit=${unit.id}`}>View stay <ArrowRight size={15} /></Link></div></article>
+      return <article className="result-row" key={unit.id}><Link to={`/stays/${unit.property.slug}`} className="result-photo">{photo ? <img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || unit.name} /> : <div className="image-empty"><span>{unit.property.city || 'StayEase'}</span></div>}</Link><div className="result-info"><span className="eyebrow"><MapPin size={12} /> {unit.property.city || unit.property.name}</span><Link to={`/stays/${unit.property.slug}`}><h2>{unit.name} <span>at {unit.property.name}</span></h2></Link><p>{unit.description || `${unit.unit_type} · ${unit.bedrooms} bedrooms · Up to ${unit.capacity} guests`}</p><div className="amenity-list">{(unit.unit_amenities ?? []).slice(0, 3).map(({ amenities }) => amenities?.name).filter(Boolean).map((name) => <span key={name}>{name}</span>)}</div></div><div className="result-action"><strong>{formatMoney(unit.base_nightly_price, unit.currency)}</strong><span>starting / night</span><Link className="button button-outline" to={`/stays/${unit.property.slug}?unit=${unit.id}`}>View stay <ArrowRight size={15} /></Link></div></article>
     })}</div>
     {(checkIn || checkout) && <div className="inline-note">Your selected dates are checked securely when you request a booking. A request is not confirmed until the host approves it.</div>}
   </section>

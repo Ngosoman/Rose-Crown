@@ -80,7 +80,7 @@ export async function recordCheckout(bookingId, notes = '') {
   return data
 }
 
-export async function listingPhotoUrl(path) {
+export function listingPhotoUrl(path) {
   if (!supabase || !path) return null
   const { data } = supabase.storage.from('stayease-listings').getPublicUrl(path)
   return data.publicUrl

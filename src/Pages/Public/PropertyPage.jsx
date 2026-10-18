@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Bath, BedDouble, MapPin, Users } from 'lucide-react'
-import { getProperty } from '../../Services/stayService'
+import { getProperty, listingPhotoUrl } from '../../Services/stayService'
 import { ConfigState, EmptyState, ErrorState, LoadingState } from '../../Components/Common/Feedback'
 import { formatMoney, getUnitImage } from '../../Utils/format'
 
@@ -34,7 +34,7 @@ export default function PropertyPage() {
     <div className="property-heading"><div><span className="eyebrow"><MapPin size={13} /> {property.city || property.address || 'StayEase collection'}</span><h1>{property.name}</h1></div><p>{property.description}</p></div>
     <div className="property-gallery">{property.units.slice(0, 3).map((unit, index) => {
       const photo = getUnitImage(unit)
-      return <div className={`gallery-tile gallery-tile-${index + 1}`} key={unit.id}>{photo ? <img src={`https://placeholder.invalid/${encodeURIComponent(photo.storage_path)}`} alt={photo.alt_text || unit.name} /> : <div className="image-empty"><span>{unit.name} / {unit.unit_type}</span></div>}</div>
+      return <div className={`gallery-tile gallery-tile-${index + 1}`} key={unit.id}>{photo ? <img src={listingPhotoUrl(photo.storage_path)} alt={photo.alt_text || unit.name} /> : <div className="image-empty"><span>{unit.name} / {unit.unit_type}</span></div>}</div>
     })}{property.units.length === 0 && <div className="gallery-empty">No units are currently published.</div>}</div>
     <div className="property-detail-layout"><div className="property-about"><span className="eyebrow">The property</span><h2>A slower pace, <em>by design.</em></h2><p>{property.description || 'A thoughtfully prepared place for your next stay.'}</p><div className="house-rules"><div><span>Check in</span><strong>{property.check_in_time?.slice(0, 5) ?? '15:00'}</strong></div><div><span>Check out</span><strong>{property.checkout_time?.slice(0, 5) ?? '11:00'}</strong></div><div><span>Local time</span><strong>{property.timezone}</strong></div></div></div>
       <div className="unit-list"><div className="unit-list-heading"><div><span className="eyebrow">Choose your space</span><h2>Available stays</h2></div><span>{property.units.length} {property.units.length === 1 ? 'option' : 'options'}</span></div>
