@@ -367,6 +367,7 @@ h1, h2, h3 { color: var(--ink); }
 .calendar-marker { width: 100%; overflow: hidden; padding: 4px 5px; background: var(--sage-light); color: #365343; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-marker.status-pending { background: #f6eddc; color: #795a28; }
 .calendar-marker.status-checkout_due { background: #f8e9df; color: #8a492e; }
+.calendar-block-marker { background: #e7e8ed; color: #4c5363; }
 .calendar-agenda { border-bottom: 1px solid var(--line); }
 .agenda-day { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
 .agenda-date { display: flex; flex-direction: column; gap: 3px; }
