@@ -10,14 +10,14 @@ alter table public.unit_rate_rules
 
 create or replace function public.get_unit_availability(p_unit_id uuid, p_check_in date, p_checkout date)
 returns table (unit_id uuid, available boolean)
-language plpgsql stable security definer set search_path = ''
+language plpgsql security definer set search_path = ''
 as $$
 declare v_unit public.units%rowtype;
 begin
   if p_check_in is null or p_checkout is null or p_checkout <= p_check_in or p_check_in < current_date then
     raise exception 'Choose a valid future stay' using errcode = '22023';
   end if;
-  select * into v_unit from public.units where id = p_unit_id and active;
+  select * into v_unit from public.units where id = p_unit_id and active for update;
   if not found or not exists (select 1 from public.properties p where p.id = v_unit.property_id and p.published) then
     return query select p_unit_id, false;
     return;
@@ -35,16 +35,17 @@ end $$;
 create or replace function public.record_checkin(p_booking_id uuid, p_notes text default '')
 returns public.bookings language plpgsql security definer set search_path = ''
 as $$
-declare v_booking public.bookings%rowtype; v_property_id uuid;
+declare v_booking public.bookings%rowtype; v_property_id uuid; v_previous_status public.booking_status;
 begin
   select u.property_id into v_property_id from public.units u join public.bookings b on b.unit_id = u.id where b.id = p_booking_id;
   if v_property_id is null or not public.can_manage_property(v_property_id) then raise exception 'Not authorized' using errcode = '42501'; end if;
   select * into v_booking from public.bookings where id = p_booking_id for update;
   perform 1 from public.units where id = v_booking.unit_id for update;
   if v_booking.status <> 'approved' then raise exception 'Booking is not ready for check-in' using errcode = 'P0001'; end if;
+  v_previous_status := v_booking.status;
   update public.bookings set status = 'checked_in', updated_at = now() where id = v_booking.id returning * into v_booking;
   insert into public.checkin_checkout_logs(booking_id, action, actor_id, notes) values (v_booking.id, 'check_in', (select auth.uid()), coalesce(p_notes, ''));
-  insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id) values (v_booking.id, 'approved', 'checked_in', (select auth.uid()));
+  insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id) values (v_booking.id, v_previous_status, 'checked_in', (select auth.uid()));
   insert into public.audit_logs(actor_id, property_id, action, entity_type, entity_id) values ((select auth.uid()), v_property_id, 'checkin_recorded', 'booking', v_booking.id);
   return v_booking;
 end $$;
@@ -52,7 +53,7 @@ end $$;
 create or replace function public.cancel_booking(p_booking_id uuid, p_reason text default '')
 returns public.bookings language plpgsql security definer set search_path = ''
 as $$
-declare v_booking public.bookings%rowtype; v_unit public.units%rowtype; v_staff boolean;
+declare v_booking public.bookings%rowtype; v_unit public.units%rowtype; v_staff boolean; v_previous_status public.booking_status;
 begin
   select * into v_booking from public.bookings where id = p_booking_id for update;
   if not found then raise exception 'Booking not found' using errcode = 'P0002'; end if;
@@ -61,10 +62,11 @@ begin
   if v_booking.guest_id is distinct from (select auth.uid()) and not v_staff then raise exception 'Not authorized' using errcode = '42501'; end if;
   if v_booking.status not in ('pending', 'approved') then raise exception 'An occupied or completed stay cannot be cancelled here' using errcode = 'P0001'; end if;
   if v_booking.status = 'approved' and not v_staff then raise exception 'Contact the property to request cancellation of an approved stay' using errcode = '42501'; end if;
+  v_previous_status := v_booking.status;
   update public.bookings set status = 'cancelled', cancellation_reason = nullif(trim(p_reason), ''), updated_at = now() where id = v_booking.id returning * into v_booking;
   update public.unit_reservations set released_at = now() where booking_id = v_booking.id and released_at is null;
   insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id, reason)
-    values (v_booking.id, case when v_booking.hold_expires_at is null then 'approved'::public.booking_status else 'pending'::public.booking_status end, 'cancelled', (select auth.uid()), coalesce(p_reason, ''));
+    values (v_booking.id, v_previous_status, 'cancelled', (select auth.uid()), coalesce(p_reason, ''));
   insert into public.audit_logs(actor_id, property_id, action, entity_type, entity_id, details)
     values ((select auth.uid()), v_unit.property_id, 'booking_cancelled', 'booking', v_booking.id, jsonb_build_object('reason', coalesce(p_reason, '')));
   return v_booking;
@@ -128,7 +130,9 @@ begin
       insert into public.booking_status_history(booking_id, previous_status, new_status, reason) values (v_booking.id, 'checked_in', 'checkout_due', 'Scheduled checkout time passed; guest remains in-house');
       v_due := v_due + 1;
     end if;
-    if v_booking.status in ('checked_in', 'checkout_due') and v_due_at <= p_now then
+    if v_booking.status = 'checked_in' and v_due_at <= p_now then
+      v_slot := 'checkout_due';
+    elsif v_booking.status = 'checkout_due' and v_due_at <= p_now then
       v_overdue_slot := floor(extract(epoch from (p_now - v_due_at)) / (v_interval * 60));
       v_slot := 'overdue-' || v_overdue_slot::text;
     elsif v_booking.status = 'checked_in' and v_booking.checkout_final_reminder_minutes > 0 and p_now >= v_due_at - make_interval(mins => v_booking.checkout_final_reminder_minutes) and p_now < v_due_at then

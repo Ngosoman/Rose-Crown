@@ -236,6 +236,8 @@ revoke all on function public.is_super_admin() from public;
 revoke all on function public.can_manage_property(uuid) from public;
 grant execute on function public.is_super_admin() to authenticated;
 grant execute on function public.can_manage_property(uuid) to authenticated;
+grant execute on function public.is_super_admin() to anon;
+grant execute on function public.can_manage_property(uuid) to anon;
 
 create or replace function public.create_booking_request(
   p_unit_id uuid, p_check_in date, p_checkout date,
@@ -322,7 +324,7 @@ end $$;
 create or replace function public.decide_booking(p_booking_id uuid, p_approve boolean, p_reason text default '')
 returns public.bookings language plpgsql security definer set search_path = ''
 as $$
-declare v_booking public.bookings%rowtype; v_property_id uuid;
+declare v_booking public.bookings%rowtype; v_property_id uuid; v_previous_status public.booking_status;
 begin
   select u.property_id into v_property_id from public.units u join public.bookings b on b.unit_id = u.id where b.id = p_booking_id;
   if v_property_id is null or not public.can_manage_property(v_property_id) then raise exception 'Not authorized' using errcode = '42501'; end if;
@@ -353,10 +355,11 @@ begin
   select * into v_booking from public.bookings where id = p_booking_id for update;
   perform 1 from public.units where id = v_booking.unit_id for update;
   if v_booking.status not in ('checked_in', 'checkout_due') then raise exception 'Booking is not checked in' using errcode = 'P0001'; end if;
+  v_previous_status := v_booking.status;
   update public.bookings set status = 'checked_out', updated_at = now() where id = v_booking.id returning * into v_booking;
   update public.unit_reservations set released_at = now() where booking_id = v_booking.id and released_at is null;
   insert into public.checkin_checkout_logs(booking_id, action, actor_id, notes) values (v_booking.id, 'check_out', (select auth.uid()), coalesce(p_notes, ''));
-  insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id) values (v_booking.id, 'checkout_due', 'checked_out', (select auth.uid()));
+  insert into public.booking_status_history(booking_id, previous_status, new_status, actor_id) values (v_booking.id, v_previous_status, 'checked_out', (select auth.uid()));
   insert into public.audit_logs(actor_id, property_id, action, entity_type, entity_id) values ((select auth.uid()), v_property_id, 'checkout_recorded', 'booking', v_booking.id);
   return v_booking;
 end $$;
