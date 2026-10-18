@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-stayease-cron-secret',
@@ -47,9 +47,10 @@ Deno.serve(async (request) => {
   for (const notification of (notifications ?? []) as Notification[]) {
     const outcome = await deliver(admin, notification)
     const patch = outcome.sent
-      ? { delivery_status: 'sent', sent_at: new Date().toISOString(), last_error: null }
+      ? { delivery_status: 'sent', sent_at: new Date().toISOString(), processing_started_at: null, last_error: null }
       : {
           delivery_status: notification.attempt_count >= 5 ? 'failed' : 'pending',
+          processing_started_at: null,
           scheduled_at: new Date(Date.now() + Math.min(240, 5 * (2 ** (notification.attempt_count - 1))) * 60_000).toISOString(),
           last_error: outcome.error?.slice(0, 500) ?? 'Delivery failed.',
         }
@@ -60,7 +61,7 @@ Deno.serve(async (request) => {
   return json({ jobs, processed: results.length, results })
 })
 
-async function deliver(admin: ReturnType<typeof createClient>, notification: Notification) {
+async function deliver(admin: SupabaseClient, notification: Notification) {
   if (notification.channel === 'in_app') return { sent: true }
   if (notification.channel === 'sms' || notification.channel === 'whatsapp') {
     return { sent: false, error: `${notification.channel} delivery provider is not configured.` }

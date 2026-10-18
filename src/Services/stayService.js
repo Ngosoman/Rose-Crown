@@ -79,6 +79,48 @@ export async function recordCheckin(bookingId, notes = '') {
   return data
 }
 
+export async function getNotifications() {
+  if (!supabase) return { data: [], error: new Error('Connect Supabase to view notifications.') }
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id,booking_id,property_id,notification_type,title,body,channel,delivery_status,scheduled_at,sent_at,attempt_count,last_error,read_at,created_at')
+    .order('created_at', { ascending: false })
+    .limit(100)
+  return { data: data ?? [], error }
+}
+
+export async function markNotificationRead(notificationId) {
+  if (!supabase) throw new Error('Connect Supabase to update notifications.')
+  const { error } = await supabase.rpc('mark_notification_read', { p_notification_id: notificationId })
+  if (error) throw error
+}
+
+export async function createManualBooking(values) {
+  if (!supabase) throw new Error('Connect Supabase to create bookings.')
+  const { data, error } = await supabase.rpc('create_manual_booking', {
+    p_unit_id: values.unitId,
+    p_check_in: values.checkIn,
+    p_checkout: values.checkout,
+    p_guest_name: values.guestName,
+    p_guest_email: values.guestEmail,
+    p_guest_phone: values.guestPhone,
+    p_source: values.source,
+    p_guest_count: Number(values.guestCount),
+    p_special_requests: values.specialRequests || '',
+  })
+  if (error) throw error
+  return data
+}
+
+export async function getStaffProperties() {
+  if (!supabase) return { data: [], error: new Error('Connect Supabase to manage properties.') }
+  const { data, error } = await supabase
+    .from('properties')
+    .select('id,name,city,units(id,name,capacity,active)')
+    .order('name')
+  return { data: data ?? [], error }
+}
+
 export async function getStaffBookings(propertyId) {
   if (!supabase) return { data: [], error: new Error('Connect Supabase to view bookings.') }
   let query = supabase

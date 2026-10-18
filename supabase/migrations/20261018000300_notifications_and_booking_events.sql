@@ -1,4 +1,6 @@
-alter table public.notifications add column read_at timestamptz;
+alter table public.notifications
+  add column read_at timestamptz,
+  add column processing_started_at timestamptz;
 
 create or replace function public.notify_booking_created()
 returns trigger language plpgsql security definer set search_path = ''
@@ -52,17 +54,29 @@ begin
   return query
   with candidates as (
     select n.id from public.notifications n
-    where n.scheduled_at <= now() and n.delivery_status in ('pending', 'failed') and n.attempt_count < 5
+    where n.scheduled_at <= now() and n.attempt_count < 5
+      and (n.delivery_status in ('pending', 'failed') or (n.delivery_status = 'processing' and n.processing_started_at < now() - interval '15 minutes'))
     order by n.scheduled_at, n.created_at
     for update skip locked
     limit least(greatest(p_limit, 1), 100)
   )
-  update public.notifications n set delivery_status = 'processing', attempt_count = n.attempt_count + 1
+  update public.notifications n set delivery_status = 'processing', processing_started_at = now(), attempt_count = n.attempt_count + 1
   from candidates c where n.id = c.id
   returning n.*;
+end $$;
+
+create or replace function public.mark_notification_read(p_notification_id uuid)
+returns void language plpgsql security definer set search_path = ''
+as $$
+begin
+  update public.notifications set read_at = coalesce(read_at, now())
+  where id = p_notification_id and recipient_id = (select auth.uid());
+  if not found then raise exception 'Notification not found' using errcode = 'P0002'; end if;
 end $$;
 
 revoke all on function public.notify_booking_created() from public;
 revoke all on function public.notify_booking_status_changed() from public;
 revoke all on function public.claim_notifications(integer) from public;
 grant execute on function public.claim_notifications(integer) to service_role;
+revoke all on function public.mark_notification_read(uuid) from public;
+grant execute on function public.mark_notification_read(uuid) to authenticated;

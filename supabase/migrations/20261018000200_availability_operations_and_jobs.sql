@@ -134,7 +134,7 @@ begin
       v_slot := 'checkout_due';
     elsif v_booking.status = 'checkout_due' and v_due_at <= p_now then
       v_overdue_slot := floor(extract(epoch from (p_now - v_due_at)) / (v_interval * 60));
-      v_slot := 'overdue-' || v_overdue_slot::text;
+      v_slot := case when v_overdue_slot = 0 then null else 'overdue-' || v_overdue_slot::text end;
     elsif v_booking.status = 'checked_in' and v_booking.checkout_final_reminder_minutes > 0 and p_now >= v_due_at - make_interval(mins => v_booking.checkout_final_reminder_minutes) and p_now < v_due_at then
       v_slot := 'before-' || v_booking.checkout_final_reminder_minutes::text;
     elsif v_booking.status = 'checked_in' and v_booking.checkout_reminder_minutes > 0 and p_now >= v_due_at - make_interval(mins => v_booking.checkout_reminder_minutes) and p_now < v_due_at - make_interval(mins => v_booking.checkout_final_reminder_minutes) then
@@ -148,13 +148,13 @@ begin
         values (v_staff.user_id, v_booking.id, v_booking.property_id, case when v_slot like 'overdue-%' then 'checkout_overdue' when v_slot = 'checkout_due' then 'checkout_due' else 'checkout_reminder' end,
           case when v_slot like 'overdue-%' then 'Checkout is overdue' when v_slot = 'checkout_due' then 'Checkout is due' else 'Upcoming checkout' end,
           v_booking.guest_name || ' · ' || v_booking.reference || ' · ' || v_booking.unit_name || ' · ' || v_booking.property_name,
-          p_now, 'in_app', v_booking.id::text || ':' || v_slot || ':' || v_staff.user_id::text)
+          p_now, 'in_app', v_booking.id::text || ':' || v_due_at::text || ':' || v_slot || ':' || v_staff.user_id::text)
         on conflict (deduplication_key) do nothing;
         v_reminders := v_reminders + 1;
       end loop;
       if v_booking.guest_id is not null then
         insert into public.notifications(recipient_id, booking_id, property_id, notification_type, title, body, scheduled_at, channel, deduplication_key)
-        values (v_booking.guest_id, v_booking.id, v_booking.property_id, 'checkout_reminder', 'Checkout reminder', 'Your checkout time is ' || to_char(v_due_at at time zone v_booking.timezone, 'HH12:MI AM') || ' local time.', p_now, 'in_app', v_booking.id::text || ':' || v_slot || ':' || v_booking.guest_id::text)
+        values (v_booking.guest_id, v_booking.id, v_booking.property_id, 'checkout_reminder', 'Checkout reminder', 'Your checkout time is ' || to_char(v_due_at at time zone v_booking.timezone, 'HH12:MI AM') || ' local time.', p_now, 'in_app', v_booking.id::text || ':' || v_due_at::text || ':' || v_slot || ':' || v_booking.guest_id::text)
         on conflict (deduplication_key) do nothing;
       end if;
     end if;
