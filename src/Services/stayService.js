@@ -125,7 +125,7 @@ export async function getStaffBookings(propertyId) {
   if (!supabase) return { data: [], error: new Error('Connect Supabase to view bookings.') }
   let query = supabase
     .from('bookings')
-    .select('id,reference,guest_name,guest_email,guest_phone,check_in,checkout,status,payment_status,agreed_total,currency,hold_expires_at,source,unit:units(id,name,property_id,property:properties(name))')
+    .select('id,reference,guest_name,guest_email,guest_phone,guest_count,check_in,checkout,status,payment_status,agreed_total,currency,hold_expires_at,source,unit:units(id,name,property_id,property:properties(id,name,timezone))')
     .order('check_in', { ascending: true })
   if (propertyId) query = query.eq('unit.property_id', propertyId)
   const { data, error } = await query
