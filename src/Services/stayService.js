@@ -155,9 +155,76 @@ export async function getStaffProperties() {
   if (!supabase) return { data: [], error: new Error('Connect Supabase to manage properties.') }
   const { data, error } = await supabase
     .from('properties')
-    .select('id,name,city,units(id,name,capacity,active)')
+    .select('id,name,slug,description,address,city,timezone,currency,check_in_time,checkout_time,published,units(id,name,unit_type,capacity,bedrooms,bathrooms,description,base_nightly_price,currency,active,unit_photos(id,storage_path,alt_text,sort_order),unit_rate_rules(id,date_from,date_to,nightly_price,currency),unit_amenities(amenity_id,amenities(id,name)))')
     .order('name')
   return { data: data ?? [], error }
+}
+
+export async function getAmenities() {
+  if (!supabase) return { data: [], error: new Error('Connect Supabase to manage amenities.') }
+  const { data, error } = await supabase.from('amenities').select('id,name').order('name')
+  return { data: data ?? [], error }
+}
+
+export async function saveProperty(values, propertyId) {
+  if (!supabase) throw new Error('Connect Supabase to manage properties.')
+  const query = propertyId
+    ? supabase.from('properties').update(values).eq('id', propertyId)
+    : supabase.from('properties').insert(values)
+  const { data, error } = await query.select('id,name,slug').single()
+  if (error) throw error
+  return data
+}
+
+export async function saveUnit(values, unitId) {
+  if (!supabase) throw new Error('Connect Supabase to manage units.')
+  const query = unitId
+    ? supabase.from('units').update(values).eq('id', unitId)
+    : supabase.from('units').insert(values)
+  const { data, error } = await query.select('id,name,property_id').single()
+  if (error) throw error
+  return data
+}
+
+export async function replaceUnitAmenities(unitId, amenityIds) {
+  if (!supabase) throw new Error('Connect Supabase to manage unit amenities.')
+  const { error: deleteError } = await supabase.from('unit_amenities').delete().eq('unit_id', unitId)
+  if (deleteError) throw deleteError
+  if (amenityIds.length === 0) return
+  const { error } = await supabase.from('unit_amenities').insert(amenityIds.map((amenityId) => ({ unit_id: unitId, amenity_id: amenityId })))
+  if (error) throw error
+}
+
+export async function addUnitRateRule(values) {
+  if (!supabase) throw new Error('Connect Supabase to manage pricing.')
+  const { data, error } = await supabase.from('unit_rate_rules').insert(values).select('id').single()
+  if (error) throw error
+  return data
+}
+
+export async function uploadUnitPhoto(unit, file, altText = '') {
+  if (!supabase) throw new Error('Connect Supabase to manage listing photos.')
+  if (!file.type.startsWith('image/')) throw new Error('Choose an image file.')
+  if (file.size > 8 * 1024 * 1024) throw new Error('Images must be 8 MB or smaller.')
+  const extension = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+  const filename = `${crypto.randomUUID()}.${extension}`
+  const storagePath = `${unit.property_id}/${unit.id}/${filename}`
+  const { error: uploadError } = await supabase.storage.from('rose-crown-listings').upload(storagePath, file, { contentType: file.type, upsert: false })
+  if (uploadError) throw uploadError
+  const { data, error } = await supabase.from('unit_photos').insert({ unit_id: unit.id, storage_path: storagePath, alt_text: altText }).select('id,storage_path').single()
+  if (error) {
+    await supabase.storage.from('rose-crown-listings').remove([storagePath])
+    throw error
+  }
+  return data
+}
+
+export async function deleteUnitPhoto(photo) {
+  if (!supabase) throw new Error('Connect Supabase to manage listing photos.')
+  const { error } = await supabase.from('unit_photos').delete().eq('id', photo.id)
+  if (error) throw error
+  const { error: storageError } = await supabase.storage.from('rose-crown-listings').remove([photo.storage_path])
+  if (storageError) throw storageError
 }
 
 export async function getStaffBlocks() {
