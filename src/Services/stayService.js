@@ -1,5 +1,12 @@
 import { supabase } from '../Lib/supabase'
 
+function explainMissingSchema(error) {
+  if (error?.code === 'PGRST205' || /Could not find the table 'public\.(properties|bookings)' in the schema cache/i.test(error?.message ?? '')) {
+    return new Error('Rose-Crown is connected to Supabase, but its database schema has not been deployed to this project yet.')
+  }
+  return error
+}
+
 export async function getProperties() {
   if (!supabase) return { data: [], error: null, configured: false }
   const { data, error } = await supabase
@@ -10,7 +17,7 @@ export async function getProperties() {
   return { data: (data ?? []).map((property) => ({
     ...property,
     units: (property.units ?? []).filter((unit) => unit.active !== false),
-  })), error, configured: true }
+  })), error: explainMissingSchema(error), configured: true }
 }
 
 export async function getProperty(slug) {
@@ -21,7 +28,7 @@ export async function getProperty(slug) {
     .eq('slug', slug)
     .eq('published', true)
     .maybeSingle()
-  return { data: data ? { ...data, units: (data.units ?? []).filter((unit) => unit.active) } : null, error, configured: true }
+  return { data: data ? { ...data, units: (data.units ?? []).filter((unit) => unit.active) } : null, error: explainMissingSchema(error), configured: true }
 }
 
 export async function getGuestBookings() {

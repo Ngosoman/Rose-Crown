@@ -16,10 +16,9 @@
 - [x] Create README and architecture, schema, workflow, reminder, security, deployment, decision, and testing documentation.
 
 ## Current Blockers / Verification Notes
-- Remote Supabase inspection or migration application cannot be performed until an authorized project connection and CLI/configuration are provided. No remote changes have been attempted.
-- The Rose-Crown Supabase dashboard is accessible for read-only inspection. No migrations were applied because the shared project shows only a `main` branch and its development/production role has not been confirmed.
+- The Rose-Crown Supabase dashboard is accessible for read-only inspection. The shared project is on `main`, has no migrations or public tables, and has not been identified as development versus production; no migrations were applied.
 - Neither `supabase`, `psql`, nor `docker` is installed/available in the current environment; migrations and Edge Functions remain unexecuted/unapplied.
-- The project URL is known from the dashboard, but the local `.env` has no Supabase URL or publishable/anon key populated. The app shows setup guidance and does not fabricate property or booking data.
+- The ignored local `.env` now contains the project URL and public anon key; an Auth health request returned HTTP 200. The project still lacks `public.properties`, so real listing data is unavailable until the reviewed schema is applied.
 - Email, SMS, WhatsApp, and payment provider credentials are not present. In-app queues and the Resend adapter are implemented; unconfigured external delivery is recorded as failed and payments remain pending.
 - Client decisions needed before policy is finalized: cancellation/refund rules, payment provider and deposit rules, cleaning turnaround, fee/tax policy, extension fee policy, staff recipients, and legal policy copy.
 
