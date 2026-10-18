@@ -12,7 +12,7 @@
 - [x] Add four ordered local migrations for identity, properties, units, pricing, reservations, bookings, operations, notifications, audit, RLS, storage, and transactional RPCs.
 - [x] Add the notification Edge Function and idempotent database jobs for holds, checkout reminders/briefings, and delivery retries. Remote scheduling is not configured.
 - [x] Add pgTAP schema/constraint checks and focused frontend tests. Frontend tests were executed; pgTAP was authored but could not run without a local database.
-- [ ] Complete and verify the documentation set.
+- [x] Create README and architecture, schema, workflow, reminder, security, deployment, decision, and testing documentation.
 
 ## Current Blockers / Verification Notes
 - Remote Supabase inspection or migration application cannot be performed until an authorized project connection and CLI/configuration are provided. No remote changes have been attempted.
