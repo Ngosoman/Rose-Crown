@@ -33,17 +33,26 @@ export default function ListingsManager({ isSuperAdmin }) {
   const [rateUnitId, setRateUnitId] = useState('')
   const property = properties.find((item) => item.id === selectedPropertyId) ?? properties[0]
 
-  async function refresh() {
+  async function loadListings() {
     const [propertyResult, amenityResult] = await Promise.all([getStaffProperties(), getAmenities()])
     if (propertyResult.error) throw propertyResult.error
     if (amenityResult.error) throw amenityResult.error
-    setProperties(propertyResult.data)
-    setAmenities(amenityResult.data)
+    return { properties: propertyResult.data, amenities: amenityResult.data }
+  }
+
+  async function refresh() {
+    const result = await loadListings()
+    setProperties(result.properties)
+    setAmenities(result.amenities)
   }
 
   useEffect(() => {
     let current = true
-    refresh().catch((reason) => current && setError(reason.message || 'Listings could not be loaded.'))
+    loadListings().then((result) => {
+      if (!current) return
+      setProperties(result.properties)
+      setAmenities(result.amenities)
+    }).catch((reason) => current && setError(reason.message || 'Listings could not be loaded.'))
       .finally(() => current && setLoading(false))
     return () => { current = false }
   }, [])
