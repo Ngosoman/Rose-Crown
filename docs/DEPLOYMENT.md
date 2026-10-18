@@ -3,7 +3,7 @@
 ## Local
 
 1. Install Node.js 20.19+ (or 22.12+) and run `npm install` in `Frontend/`.
-2. Copy `.env.example` to `.env` and set the project URL and public anon/publishable key. Never set the service-role key in Vite.
+2. Set `VITE_SUPABASE_URL` and the public anon/publishable key in the ignored `.env`. Never set the service-role key in Vite.
 3. For local Supabase, install the official CLI and Docker, then run:
 
 ```sh
@@ -13,7 +13,7 @@ npx supabase test db
 npm run dev
 ```
 
-No local Docker, psql, Supabase CLI, or configured project credentials were available during implementation, so local migrations and Edge Functions have not been executed.
+No local Docker, psql, or Supabase CLI are available. The frontend has been connected to the shared project; migrations were applied remotely through the authenticated dashboard SQL Editor.
 
 ## Staging
 
@@ -54,6 +54,8 @@ Verify Cron run history, Edge Function responses, notification attempts, and del
 
 ## Remote Migration Workflow
 
-After linking a target project, first run `npx supabase migration list --linked` and inspect the remote schema. Apply the reviewed migrations with `npx supabase db push --linked` only after the project owner approves the target. Do not use `db reset`, drop existing tables, or force migration history. Verify the remote migration list and schema/RLS after application.
+The four local migration files were executed as one transaction in the shared Rose-Crown project on the `main` branch. The dashboard records versions `20261018000100` through `20261018000400`; catalog verification found 18 public tables with RLS, 26 policies, 15 expected RPCs, two GiST exclusion constraints, and the public listing bucket. The project’s development/production designation is not known, so treat this as an applied shared environment, not as a certified staging deployment.
 
-No migration has been applied to staging or production from this session. Email provider, payment gateway, SMS, and WhatsApp configuration remain separate launch blockers.
+The migration batch and version rows were submitted directly through the Supabase SQL Editor because the CLI/psql/Docker are unavailable. Migration dashboard version rows show “Name not available”; future CLI-based migration management should first inspect and align this history. Never use `db reset`, drop existing tables, or force migration history.
+
+`process-notifications` has not been deployed. `pg_cron`, `pg_net`, and Vault scheduling have not been enabled/configured. Deploy the function, set `ROSE_CROWN_CRON_SECRET` (and optional Resend secrets), configure the five-minute schedule, then verify run and delivery history. Payment gateway, SMS, and WhatsApp configuration remain launch blockers.
