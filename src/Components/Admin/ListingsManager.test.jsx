@@ -72,6 +72,7 @@ describe('Listings manager role controls', () => {
 
   it('lets a property manager manage units but not create properties', async () => {
     render(<ListingsManager isSuperAdmin={false} canManageListings />)
+    expect(await screen.findByLabelText('Property')).toHaveValue('property-1')
     expect(await screen.findByRole('button', { name: 'Add unit' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit property' })).not.toBeInTheDocument()
   })
