@@ -13,7 +13,7 @@ export function ConfigState() {
     <div className="config-state">
       <span className="eyebrow">One last connection</span>
       <h2>Connect your StayEase database</h2>
-      <p>Add your Supabase project URL and publishable key to <code>Frontend/.env</code>, then restart the development server. Your credentials stay out of the browser bundle except for the intended public key.</p>
+      <p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to <code>Frontend/.env</code>, then restart the development server. Use only the project’s publishable key in the browser.</p>
     </div>
   )
 }
