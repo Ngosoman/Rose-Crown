@@ -13,7 +13,7 @@ export function ConfigState() {
     <div className="config-state">
       <span className="eyebrow">One last connection</span>
       <h2>Connect your Rose-Crown database</h2>
-      <p>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to <code>Frontend/.env</code>, then restart the development server. Use only the project’s publishable key in the browser.</p>
+      <p>For the live site, add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to Vercel Project Settings → Environment Variables, then redeploy. Locally, put them in <code>Frontend/.env</code> and restart Vite. Use only the publishable key in the browser; never use the service-role key here.</p>
     </div>
   )
 }
