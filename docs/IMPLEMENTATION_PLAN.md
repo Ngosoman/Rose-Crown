@@ -2,8 +2,8 @@
 
 ## Inspection
 - [x] Confirmed this is the untouched React 19 / Vite 8 starter; no application routes or business features exist yet.
-- [x] Confirmed there are no Supabase project files, migration history, CLI, configured environment variables, or accessible Supabase MCP tools in this session.
-- [x] Inspected the shared Rose-Crown Supabase dashboard in read-only mode: the main branch is healthy, the migration screen shows no migrations, the public schema has no base tables, and only pgcrypto is installed from the checked extensions.
+- [x] At initial repository inspection, there were no local Supabase files, migration history, configured environment variables, or accessible Supabase MCP tools.
+- [x] Before deployment, inspected the shared Rose-Crown project: healthy `main` branch, no app migrations or public tables, and pgcrypto already installed in `extensions`.
 - [x] Inspected the shared Rose-Crown Supabase project before migration: healthy `main` branch, no app tables/migrations, and pgcrypto already in `extensions`.
 - [x] Preserved the existing React/Vite/Tailwind setup and uncommitted Git state.
 - [x] Ignore local environment secrets and generated Supabase state before adding configuration examples.
@@ -11,13 +11,12 @@
 ## Delivery Phases
 - [x] Add React Router, Supabase client, forms/validation, accessible icons, calendar/chart dependencies, and test tooling.
 - [x] Build responsive public listing/search/detail, authentication, guest requests/history/inbox/extensions, and staff booking/check-in/checkout/calendar workflows.
-- [x] Add four ordered local migrations for identity, properties, units, pricing, reservations, bookings, operations, notifications, audit, RLS, storage, and transactional RPCs.
+- [x] Add four ordered migrations for identity, properties, units, pricing, reservations, bookings, operations, notifications, audit, RLS, storage, and transactional RPCs.
 - [x] Add the notification Edge Function and idempotent database jobs for holds, checkout reminders/briefings, and delivery retries. Remote scheduling is not configured.
 - [x] Add pgTAP schema/constraint checks and focused frontend tests. Frontend tests were executed; pgTAP was authored but could not run without a local database.
 - [x] Create README and architecture, schema, workflow, reminder, security, deployment, decision, and testing documentation.
 
 ## Current Blockers / Verification Notes
-- The Rose-Crown Supabase dashboard is accessible for read-only inspection. The shared project is on `main`, has no migrations or public tables, and has not been identified as development versus production; no migrations were applied.
 - The four ordered SQL migrations were applied atomically through the authenticated Supabase SQL Editor to the shared Rose-Crown project on `main`; dashboard history and live catalog checks confirm versions 20261018000100 through 20261018000400.
 - The project branch's development/production role remains unconfirmed. No reset, drop, truncate, or user-data migration was performed.
 - Supabase CLI, psql, and Docker are unavailable; pgTAP was not run. The Edge Function is not deployed, and pg_cron/pg_net/Vault scheduling has not been configured.
@@ -25,7 +24,6 @@
 - Email, SMS, WhatsApp, and payment provider credentials are not present. In-app queues and the Resend adapter are implemented; unconfigured external delivery is recorded as failed and payments remain pending.
 - Client decisions needed before policy is finalized: cancellation/refund rules, payment provider and deposit rules, cleaning turnaround, fee/tax policy, extension fee policy, staff recipients, and legal policy copy.
 
-## Implemented Locally, Not Yet Verified Against Supabase
 ## Implemented and Remotely Verified
 - Database authority: half-open reservation ranges, GiST overlap exclusion, per-unit locks, expiring 15-minute holds, server-side nightly pricing/capacity, manual reservations, approval/rejection, cancellation, blocks, extensions, and recorded check-in/checkout.
 - Access: Auth-created guest profiles, server-provisioned roles, property memberships, RLS on all 18 public tables, restricted function grants, and listing Storage policies. Catalog verification reports 26 policies.

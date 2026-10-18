@@ -22,4 +22,4 @@ Interactive availability operations lock the unit before booking rows. Reservati
 
 The application includes public listing/search/detail, guest auth/booking/history/notifications/extension requests, a staff queue/manual booking/check-in/checkout/extension desk, and a property/unit-filtered day/week/month calendar. Property/unit editing, photo upload UI, broad analytics/reporting, payment gateway integration, and outbound SMS/WhatsApp are not implemented.
 
-No Supabase project was configured in this workspace. Local migration files and RPCs are source code only until applied and tested against an isolated Supabase project.
+The four ordered migrations have been applied to the shared Rose-Crown Supabase project on `main`. Catalog checks verified the tables, RLS policies, RPCs, overlap constraints, storage bucket, and migration versions. The project’s development/production designation remains unconfirmed; Edge Function deployment and scheduled invocation are not configured.
